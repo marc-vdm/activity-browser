@@ -8,6 +8,7 @@ class Application(object):
         self.main_window = MainWindow()
         self.controller = Controller()
 
+
     def show(self):
         self.main_window.showMaximized()
 
