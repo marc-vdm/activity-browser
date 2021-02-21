@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+"""
 from PyQt4 import QtCore, QtGui, QtWebKit
 # from PySide import QtCore, QtGui, QtWebKit
 from browser_utils import *
@@ -500,8 +500,8 @@ class MPWidget(QtGui.QWidget):
 
     def get_meta_process_lcas(self, process_list=None, method=None):
         """
-        returns dict where: keys = MP name, value = LCA score
-        """
+#        #returns dict where: keys = MP name, value = LCA score
+"""
         method = self.lcaData.LCIA_METHOD
         if not method:
             self.signal_status_bar_message.emit('Need to define an LCIA method first.')
@@ -812,3 +812,4 @@ class MPWidget(QtGui.QWidget):
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '.\MetaProcessDatabases', file_types)
         with open(filename, 'w') as outfile:
             json.dump(outdata, outfile, indent=4, sort_keys=True)
+"""
