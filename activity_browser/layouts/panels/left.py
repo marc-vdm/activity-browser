@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from .panel import ABTab
 from ..tabs import (ProjectTab, MethodsTab, HistoryTab)
+from ...extensions.mlca import mLCATab
 
 
 class LeftPanel(ABTab):
@@ -13,6 +14,7 @@ class LeftPanel(ABTab):
             "Project": ProjectTab(self),
             "Impact Categories": MethodsTab(self),
             "History": HistoryTab(self),
+            "mLCA": mLCATab(self),
         }
         for tab_name, tab in self.tabs.items():
             self.addTab(tab, tab_name)
