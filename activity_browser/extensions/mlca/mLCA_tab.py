@@ -44,15 +44,14 @@ class mLCATab(QtWidgets.QWidget):
     def update_widgets(self):
         """Update widgets when a new database has been selected or the project has been changed.
         Hide empty widgets (e.g. Biosphere Flows table when an inventory database is selected)."""
-        no_modules = self.modular_database_widget.table.rowCount() == 0
+        no_modules = self.module_widget.table.rowCount() == 0
 
         self.modular_database_widget.update_widget()
 
-        # TODO this hide-show does not seem functional (also in project-manager tab)
         if not no_modules:
-            self.modular_database_widget.label_no_module_selected.show()
-        else:
             self.modular_database_widget.label_no_module_selected.hide()
+        else:
+            self.modular_database_widget.label_no_module_selected.show()
             self.module_widget.hide()
         self.resize_splitter()
 
