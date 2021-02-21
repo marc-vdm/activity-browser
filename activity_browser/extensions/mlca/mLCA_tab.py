@@ -43,7 +43,7 @@ class mLCATab(QtWidgets.QWidget):
     def update_widgets(self):
         """Update widgets when a new database has been selected or the project has been changed.
         Hide empty widgets (e.g. Biosphere Flows table when an inventory database is selected)."""
-        no_modules = self.module_widget.table.rowCount() == 0
+        no_modules = self.module_widget.outputs_table.rowCount() == 0
 
         self.modular_database_widget.update_widget()
 
@@ -71,6 +71,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.delete_database_button = QtWidgets.QPushButton(
             qicons.delete, "Delete"
         )
+        self.delete_database_button.setToolTip('Delete the modular database')
 
         self.connect_signals()
         self.construct_layout()
@@ -85,7 +86,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         h_widget = QtWidgets.QWidget()
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addWidget(header('Databases:'))
-        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  # TODO add mLCA database chooser
+        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  #TODO replace with dropdown??
         h_layout.addWidget(self.new_database_button)
         h_layout.addWidget(self.copy_database_button)
         h_layout.addWidget(self.delete_database_button)
@@ -101,7 +102,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.table = DatabasesTable() #TODO replace with mLCA database table
+        self.table = DatabasesTable() #TODO replace with ModuleDatabaseTable
 
         # Labels
         self.label_no_module_selected = QtWidgets.QLabel(
@@ -110,6 +111,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
         # Buttons
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
+        self.new_module_button.setToolTip('Add a new module')
 
         self._construct_layout()
         self._connect_signals()
@@ -149,7 +151,9 @@ class ModuleWidget(QtWidgets.QWidget):
         super(ModuleWidget, self).__init__(parent)
         self.header = 'Module:'
 
-        self.table = ActivitiesBiosphereTable(self) #TODO replace with module table
+        self.outputs_table = ActivitiesBiosphereTable(self) #TODO replace with module outputs table
+        self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
+        self.cuts_table = ActivitiesBiosphereTable(self)  # TODO replace with module cuts table/tree
 
         # Header widget
         self.header_widget = QtWidgets.QWidget()
@@ -158,16 +162,20 @@ class ModuleWidget(QtWidgets.QWidget):
         self.header_layout.addWidget(header(self.header))
         self.header_widget.setLayout(self.header_layout)
 
-        self.label_module = QtWidgets.QLabel("[]")
-        self.header_layout.addWidget(self.label_module)
-        signals.database_selected.connect(self.update_table) #TODO replace with module_selected on right table
+        signals.database_selected.connect(self.update_table) #TODO replace database_selected with module_selected on right table
 
-        # Overall Layout
-        self.v_layout = QtWidgets.QVBoxLayout()
-        self.v_layout.setAlignment(QtCore.Qt.AlignTop)
-        self.v_layout.addWidget(self.header_widget)
-        self.v_layout.addWidget(self.table)
-        self.setLayout(self.v_layout)
+        # name widget
+        self.name_widget = QtWidgets.QWidget()
+        self.name_layout = QtWidgets.QHBoxLayout()
+        self.name_layout.setAlignment(QtCore.Qt.AlignLeft)
+        self.name_layout.addWidget(QtWidgets.QLabel('Name:'))
+        self.name_layout.addWidget(QtWidgets.QLineEdit())
+        self.name_widget.setLayout(self.name_layout)
+
+        # output widget
+        self.output_scaling_checkbox = QtWidgets.QCheckBox('Output based scaling (default)')
+        self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off')
+        self.output_scaling_checkbox.setChecked(True)
 
         self.table.setSizePolicy(QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred,
@@ -181,10 +189,11 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def reset_widget(self):
         self.hide()
-        self.table.model.clear()
+        self.outputs_table.model.clear()
+        self.chain_table.model.clear()
+        self.cuts_table.model.clear()
 
     def update_table(self, db_name=''):
-        # print('Updating database table: ', db_name)
-        if self.table.database_name:
+        if self.outputs_table.database_name: #TODO how to do this with three tables?
             self.show()
         self.label_module.setText("[{}]".format(db_name))
