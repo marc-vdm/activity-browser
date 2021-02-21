@@ -21,7 +21,6 @@ class mLCATab(QtWidgets.QWidget):
 
         # Layout
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        # self.splitter.addWidget(self.projects_widget)
         self.splitter.addWidget(self.modular_database_widget)
         self.splitter.addWidget(self.module_widget)
 
@@ -60,12 +59,6 @@ class mLCATab(QtWidgets.QWidget):
         widgets = [self.modular_database_widget, self.module_widget]
         sizes = [x.sizeHint().height() for x in widgets]
         self.splitter.setSizes(sizes)
-
-
-        # print("Widget sizes:", sizes)
-        # print("\nSH DB/Act/Bio: {}/{}/{}". format(*[x.sizeHint() for x in widgets]))
-        # print("Splitter Sizes:", self.splitter.sizes())
-        # print("SH Splitter Height:", self.splitter.height())
 
 
 class ModularDatabasesWidget(QtWidgets.QWidget):
@@ -179,9 +172,6 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def connect_signals(self):
         signals.project_selected.connect(self.reset_widget)
-
-    # def sizeHint(self):
-    #     return self.table.sizeHint()
 
     def reset_widget(self):
         self.hide()
