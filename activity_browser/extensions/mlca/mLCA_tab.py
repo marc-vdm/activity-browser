@@ -73,7 +73,9 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 
         # Buttons
         self.new_database_button = QtWidgets.QPushButton(qicons.add, "New")
+        self.new_database_button.setToolTip('Add a new modular database')
         self.copy_database_button = QtWidgets.QPushButton(qicons.copy, "Copy")
+        self.copy_database_button.setToolTip('Copy the modular database')
         self.delete_database_button = QtWidgets.QPushButton(
             qicons.delete, "Delete"
         )
@@ -104,6 +106,11 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         layout.addWidget(h_widget)
         self.setLayout(layout)
 
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Maximum,
+            QtWidgets.QSizePolicy.Maximum)
+        )
+
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -124,7 +131,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
     def _connect_signals(self):
         pass
-        #self.new_database_button.clicked.connect(signals.add_database.emit)
+        #self.new_module_button.clicked.connect(signals.add_module.emit)
 
     def _construct_layout(self):
         header_widget = QtWidgets.QWidget()
@@ -155,7 +162,6 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 class ModuleWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(ModuleWidget, self).__init__(parent)
-        self.header = 'Module:'
 
         self.outputs_table = ActivitiesBiosphereTable(self) #TODO replace with module outputs table
         self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
@@ -165,7 +171,7 @@ class ModuleWidget(QtWidgets.QWidget):
         self.header_widget = QtWidgets.QWidget()
         self.header_layout = QtWidgets.QHBoxLayout()
         self.header_layout.setAlignment(QtCore.Qt.AlignLeft)
-        self.header_layout.addWidget(header(self.header))
+        self.header_layout.addWidget(header('Module:'))
         self.header_widget.setLayout(self.header_layout)
 
         signals.database_selected.connect(self.update_table) #TODO replace database_selected with module_selected on right table
@@ -182,16 +188,41 @@ class ModuleWidget(QtWidgets.QWidget):
         self.output_scaling_checkbox = QtWidgets.QCheckBox('Output based scaling (default)')
         self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off')
         self.output_scaling_checkbox.setChecked(True)
+        #TODO link signal below
 
-        self.table.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred,
-            QtWidgets.QSizePolicy.Maximum)
-        )
-
+        self.construct_layout()
         self.connect_signals()
 
     def connect_signals(self):
         signals.project_selected.connect(self.reset_widget)
+
+    def construct_layout(self):
+        # Overall Layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.addWidget(self.header_widget)
+        layout.addWidget(self.name_widget)
+        layout.addWidget(self.output_scaling_checkbox)
+        layout.addWidget(QtWidgets.QLabel('Outputs'))
+        layout.addWidget(self.outputs_table)
+        layout.addWidget(QtWidgets.QLabel('Chain'))
+        layout.addWidget(self.chain_table)
+        layout.addWidget(QtWidgets.QLabel('Cuts'))
+        layout.addWidget(self.cuts_table) #TODO treeview instead of table??
+        self.setLayout(layout)
+
+        self.outputs_table.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred,
+            QtWidgets.QSizePolicy.Maximum)
+        )
+        self.chain_table.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred,
+            QtWidgets.QSizePolicy.Maximum)
+        )
+        self.cuts_table.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred,
+            QtWidgets.QSizePolicy.Maximum)
+        )
 
     def reset_widget(self):
         self.hide()
