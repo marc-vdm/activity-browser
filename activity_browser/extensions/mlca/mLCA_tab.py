@@ -71,25 +71,31 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.delete_database_button = QtWidgets.QPushButton(
             qicons.delete, "Delete"
         )
-        # Layout
-        self.h_layout = QtWidgets.QHBoxLayout()
-        self.h_layout.addWidget(header('Databases:'))
-        self.h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<')) #TODO add mLCA database chooser
-        self.h_layout.addWidget(self.new_database_button)
-        self.h_layout.addWidget(self.copy_database_button)
-        self.h_layout.addWidget(self.delete_database_button)
-        self.setLayout(self.h_layout)
-        self.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Maximum,
-            QtWidgets.QSizePolicy.Maximum)
-        )
+
         self.connect_signals()
+        self.construct_layout()
 
     def connect_signals(self):
         pass
         #self.new_database_button.clicked.connect(signals.new_modular_database.emit)
         #self.delete_database_button.clicked.connect(signals.delete_modular_database.emit)
         #self.copy_database_button.clicked.connect(signals.copy_modular_database.emit)
+
+    def construct_layout(self):
+        h_widget = QtWidgets.QWidget()
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.addWidget(header('Databases:'))
+        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  # TODO add mLCA database chooser
+        h_layout.addWidget(self.new_database_button)
+        h_layout.addWidget(self.copy_database_button)
+        h_layout.addWidget(self.delete_database_button)
+        h_widget.setLayout(h_layout)
+
+        # Overall Layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.addWidget(h_widget)
+        self.setLayout(layout)
 
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
