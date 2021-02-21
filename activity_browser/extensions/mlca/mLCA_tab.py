@@ -7,8 +7,12 @@ from activity_browser.ui.tables import (
     DatabasesTable,
     ProjectListWidget,
     ActivitiesBiosphereTable,
-)
+) #TODO remove when all three tables have been removed
 from activity_browser.signals import signals
+from .mLCA_tables import (
+    ModuleDatabaseListWidget,
+    ModuleDatabaseTable,
+)
 
 
 class mLCATab(QtWidgets.QWidget):
@@ -41,6 +45,7 @@ class mLCATab(QtWidgets.QWidget):
         self.update_widgets()
 
     def update_widgets(self):
+        #TODO revise description
         """Update widgets when a new database has been selected or the project has been changed.
         Hide empty widgets (e.g. Biosphere Flows table when an inventory database is selected)."""
         no_modules = self.module_widget.outputs_table.rowCount() == 0
@@ -55,6 +60,7 @@ class mLCATab(QtWidgets.QWidget):
         self.resize_splitter()
 
     def resize_splitter(self):
+        # TODO revise description
         """Splitter sizes need to be reset (for some reason this is buggy if not done like this)"""
         widgets = [self.modular_database_widget, self.module_widget]
         sizes = [x.sizeHint().height() for x in widgets]
@@ -86,7 +92,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         h_widget = QtWidgets.QWidget()
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addWidget(header('Databases:'))
-        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  #TODO replace with dropdown??
+        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  #TODO replace with ModuleDatabaseListWidget
         h_layout.addWidget(self.new_database_button)
         h_layout.addWidget(self.copy_database_button)
         h_layout.addWidget(self.delete_database_button)
