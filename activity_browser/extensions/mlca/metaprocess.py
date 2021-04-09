@@ -6,6 +6,7 @@ import itertools
 import numpy as np
 import uuid
 
+import time
 
 class MetaProcess(object):
     """A description of one or several processes from a life cycle inventory database.
@@ -29,18 +30,29 @@ class MetaProcess(object):
     # INTERNAL METHODS FOR CONSTRUCTING META-PROCESSES
 
     def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, **kwargs):
+        self.last_thyme = time.time()
+        print('+++ 1s    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+        self.last_thyme = time.time()
         self.key = None  # created when MP saved to a DB
         self.name = name
         self.cuts = cuts
         self.output_based_scaling = output_based_scaling
         self.chain = self.remove_cuts_from_chain(chain, self.cuts)
         self.depending_databases = list(set(c[0] for c in self.chain))
-        self.filtered_database = self.getFilteredDatabase(self.depending_databases, self.chain)
+        print('+++ 2s    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+        self.last_thyme = time.time()
+        self.filtered_database = self.getFilteredDatabase(self.depending_databases, self.chain) #This takes ~15 sec
+        print('+++ 2e    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+        self.last_thyme = time.time()
         self.edges = self.construct_graph(self.filtered_database)
         self.scaling_activities, self.isSimple = self.getScalingActivities(self.chain, self.edges)
         self.outputs = self.pad_outputs(outputs)
+        print('+++ 3s    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+        self.last_thyme = time.time()
         self.mapping, self.demand, self.matrix, self.supply_vector = \
-            self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
+            self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs) #This takes ~140 sec
+        print('+++ 3e    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+        self.last_thyme = time.time()
         self.get_edge_lists()
         self.pad_cuts()
         # a bit of convenience for users
@@ -69,9 +81,9 @@ class MetaProcess(object):
         """
         output = {}
         for name in depending_databases:
-            db = Database(name).load()
+            db = Database(name).load() #This takes ~15sec, in Py2.7 implementation it was at most 5sec
             output.update(
-                dict([(k, v) for k, v in db.iteritems() if k in chain])
+                dict([(k, v) for k, v in db.items() if k in chain])
             )
         return output
 
@@ -86,7 +98,7 @@ class MetaProcess(object):
 
         """
         return list(itertools.chain(*[[(tuple(e["input"]), k, e["amount"])
-                    for e in v["exchanges"] if e["type"] != "production" and e["input"] != k] for k, v in db.iteritems()]))
+                    for e in v["exchanges"] if e["type"] != "production" and e["input"] != k] for k, v in db.items()]))
 
     def getScalingActivities(self, chain, edges):
         """Which are the scaling activities (at least one)?
@@ -173,7 +185,11 @@ class MetaProcess(object):
                 diagonal_value = 1.0
             else:
                 try:
+                    print('+++ 31    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+                    self.last_thyme = time.time()
                     ds = Database(key[0]).load()[key]
+                    print('+++ 32    : ', round(time.time() - self.last_thyme, 1))  # TODO remove later
+                    self.last_thyme = time.time()
                     # amount does not work for ecoinvent 2.2 multioutput as co-products are not in exchanges
                     diagonal_value = [exc.get('amount', '') for exc in ds['exchanges'] if exc['type'] == "production"][0]
                 except IndexError:
