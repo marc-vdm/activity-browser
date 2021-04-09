@@ -82,6 +82,8 @@ class ParameterDefinitionTab(BaseRightTab):
             "project": self.project_table, "database": self.database_table,
             "activity": self.activity_table,
         }
+        for t in self.tables.values():
+            t.model.sync()
 
         self.new_project_param = QPushButton(qicons.add, "New")
         self.database_header = header("Database:")
@@ -132,7 +134,7 @@ can be used within the formula!</p>
             lambda: signals.add_parameter.emit(None)
         )
         self.new_database_param.clicked.connect(
-            lambda: signals.add_parameter.emit(None)
+            lambda: signals.add_parameter.emit(("db", ""))
         )
         self.show_order.stateChanged.connect(self.activity_order_column)
         self.uncertainty_columns.stateChanged.connect(
@@ -183,12 +185,10 @@ can be used within the formula!</p>
         layout.addStretch(1)
         self.setLayout(layout)
 
+    @Slot(name="rebuildParameterTables")
     def build_tables(self):
         """ Read parameters from brightway and build dataframe tables
         """
-        self.project_table.model.sync()
-        self.database_table.model.sync()
-        self.activity_table.model.sync()
         self.hide_uncertainty_columns()
         self.activity_order_column()
         # Cannot create database parameters without databases
@@ -269,7 +269,7 @@ class ParameterExchangesTab(BaseRightTab):
     def build_tables(self) -> None:
         """ Read parameters from brightway and build tree tables
         """
-        self.table.sync()
+        self.table.model.sync()
 
 
 class ParameterScenariosTab(BaseRightTab):
@@ -277,16 +277,31 @@ class ParameterScenariosTab(BaseRightTab):
         super().__init__(parent)
 
         self.load_btn = QPushButton(qicons.add, "Import parameter-scenarios")
+        self.load_btn.setToolTip(
+            "Load prepared excel files with additional parameter scenarios."
+        )
         self.save_btn = QPushButton(
             self.style().standardIcon(QStyle.SP_DialogSaveButton),
             "Export parameter-scenarios"
         )
+        self.save_btn.setToolTip(
+            "Export the current parameter scenario table to excel."
+        )
         self.calculate_btn = QPushButton(
             qicons.calculate, "Export as flow-scenarios"
         )
+        self.calculate_btn.setToolTip(
+            ("Process the current parameter scenario table into prepared flow"
+             " scenario data.")
+        )
+        self.reset_btn = QPushButton(qicons.history, "Reset table")
+        self.reset_btn.setToolTip("Reset the scenario table, wiping any changes.")
         self.hide_group = QCheckBox("Show group column")
 
         self.tbl = ScenarioTable(self)
+        self.tbl.setToolTip(
+            "This table is not editable, use the export/import functionality"
+        )
 
         self._construct_layout()
         self._connect_signals()
@@ -304,7 +319,7 @@ class ParameterScenariosTab(BaseRightTab):
     <p><b>Suggested <i>workflow</i> to create scenarios for your parameters</b>:</p>
     <p>Export parameter-scenarios. This will generate an Excel file for you where you can add scenarios (columns). 
     You may want to delete rows that you intend to change or rows that are for dependent parameters (those that depend on other parameters) as these values will be overwritten by the formulas. 
-    Finally, import the parameter-scenarios in the <i>Calculation Setup</i> (not here!) to perform scenario calculations (you need to select "Scenario-based LCA").</p>
+    Finally, import the parameter-scenarios in the <i>Calculation Setup</i> (not here!) to perform scenario calculations (you need to select "Scenario LCA").</p>
     
     <p>For more information on this topic see also the 
     <a href="https://2.docs.brightway.dev/intro.html#parameterized-datasets">Brightway2 documentation</a>.</p>
@@ -314,6 +329,7 @@ class ParameterScenariosTab(BaseRightTab):
         self.load_btn.clicked.connect(self.select_read_file)
         self.save_btn.clicked.connect(self.save_scenarios)
         self.calculate_btn.clicked.connect(self.calculate_scenarios)
+        self.reset_btn.clicked.connect(self.tbl.model.sync)
         self.hide_group.toggled.connect(self.tbl.group_column)
         signals.parameter_scenario_sync.connect(self.process_scenarios)
 
@@ -330,6 +346,7 @@ class ParameterScenariosTab(BaseRightTab):
         layout.addWidget(horizontal_line())
 
         row = QHBoxLayout()
+        row.addWidget(self.reset_btn)
         row.addWidget(self.save_btn)
         row.addWidget(self.load_btn)
         row.addWidget(self.calculate_btn)
@@ -340,14 +357,19 @@ class ParameterScenariosTab(BaseRightTab):
         layout.addStretch(1)
         self.setLayout(layout)
 
-    @Slot(int, object, name="processParameterScenarios")
-    def process_scenarios(self, table_idx: int, df: pd.DataFrame):
+    @Slot(int, object, bool, name="processParameterScenarios")
+    def process_scenarios(self, table_idx: int, df: pd.DataFrame, default: bool) -> None:
         """Use this method to discretely process a parameter scenario file
         for the LCA setup.
         """
-        self.tbl.model.sync(df=df)
-        scenarios = self.build_flow_scenarios()
-        signals.parameter_superstructure_built.emit(table_idx, scenarios)
+        try:
+            self.tbl.model.sync(df=df, include_default=default)
+            scenarios = self.build_flow_scenarios()
+            signals.parameter_superstructure_built.emit(table_idx, scenarios)
+        except AssertionError as e:
+            QMessageBox.critical(
+                self, "Cannot load parameters", str(e), QMessageBox.Ok, QMessageBox.Ok
+            )
 
     @Slot(name="loadSenarioTable")
     def select_read_file(self):

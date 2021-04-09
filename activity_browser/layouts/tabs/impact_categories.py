@@ -107,13 +107,17 @@ class MethodsTab(QtWidgets.QWidget):
         self.setLayout(container)
 
         self.reset_search_button.clicked.connect(self.table.sync)
-        self.reset_search_button.clicked.connect(self.tree.sync)
+        self.reset_search_button.clicked.connect(self.tree.model.sync)
 
         self.search_button.clicked.connect(lambda: self.table.sync(query=self.search_box.text()))
-        self.search_button.clicked.connect(lambda: self.tree.query_sync(query=self.search_box.text()))
+        self.search_button.clicked.connect(lambda: self.tree.model.sync(query=self.search_box.text()))
         self.reset_search_button.clicked.connect(self.search_box.clear)
         self.search_box.returnPressed.connect(lambda: self.table.sync(query=self.search_box.text()))
-        self.search_box.returnPressed.connect(lambda: self.tree.query_sync(query=self.search_box.text()))
+        self.search_box.returnPressed.connect(lambda: self.tree.model.sync(query=self.search_box.text()))
+
+        #Updates the search filter with each textchange, remove if it impacts performance
+        self.search_box.textChanged.connect(lambda: self.table.sync(query=self.search_box.text()))
+        self.search_box.textChanged.connect(lambda: self.tree.model.sync(query=self.search_box.text()))
 
         signals.project_selected.connect(self.search_box.clear)
         signals.new_method.connect(self.method_copied)
@@ -128,7 +132,6 @@ class MethodsTab(QtWidgets.QWidget):
         """If a method is successfully copied, sync and filter for new name."""
         query = ", ".join(method)
         self.search_box.setText(query)
-        self.table.sync(query)
 
     @QtCore.Slot(bool, name="isListToggled")
     def update_view(self, toggled: bool):
