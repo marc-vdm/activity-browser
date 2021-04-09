@@ -53,6 +53,7 @@ class LinkedMetaProcessSystem(object):
         * if the input is not of type MetaProcess()
         """
         product_names, process_names = set(), set()
+        print('+++ I am now in update') #TODO remove later
         for mp in mp_list:
             if not isinstance(mp, MetaProcess):
                 raise ValueError(u"Input must be of MetaProcesses type.")
@@ -128,11 +129,13 @@ class LinkedMetaProcessSystem(object):
         * append: adds loaded meta-processes to the existing database if True
         """
         try:
-            with open(filepath, 'r') as infile:
+            with open(filepath, 'rb') as infile:
                 raw_data = pickle.load(infile)
         except:
             raise IOError(u'Could not load file.')
+        print('+++ I am now starting mp-list') #TODO remove later
         mp_list = [MetaProcess(**mp) for mp in raw_data]
+        print('+++ I am now done making mp_list') #TODO remove later
         if append:
             self.add_mp(mp_list, rename=True)
         else:

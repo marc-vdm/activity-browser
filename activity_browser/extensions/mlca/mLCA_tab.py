@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtCore, QtWidgets
+import os
 
 from activity_browser.ui.style import header
 from activity_browser.ui.icons import qicons
@@ -9,6 +10,7 @@ from activity_browser.ui.tables import (
     ActivitiesBiosphereTable,
 ) #TODO remove when all three tables have been removed
 from activity_browser.signals import signals
+from .linkedmetaprocess import LinkedMetaProcessSystem
 from .mLCA_tables import (
     ModuleDatabaseListWidget,
     ModuleDatabaseTable,
@@ -38,6 +40,7 @@ class mLCATab(QtWidgets.QWidget):
         self.connect_signals()
 
     def connect_signals(self):
+        #TODO revise signals
         signals.project_selected.connect(self.change_project)
         signals.database_selected.connect(self.update_widgets)
 
@@ -72,29 +75,44 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         super(ModularDatabasesWidget, self).__init__()
 
         # Buttons
+        self.open_database_button = QtWidgets.QPushButton(qicons.import_db, "Open")
+        self.open_database_button.setToolTip('Open an existing modular database')
         self.new_database_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_database_button.setToolTip('Add a new modular database')
         self.copy_database_button = QtWidgets.QPushButton(qicons.copy, "Copy")
         self.copy_database_button.setToolTip('Copy the modular database')
-        self.delete_database_button = QtWidgets.QPushButton(
-            qicons.delete, "Delete"
-        )
+        self.delete_database_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.delete_database_button.setToolTip('Delete the modular database')
+
+        self.db_name_widget = QtWidgets.QLabel('Open a Modular Database or Start a new one')
 
         self.connect_signals()
         self.construct_layout()
 
     def connect_signals(self):
         pass
-        #self.new_database_button.clicked.connect(signals.new_modular_database.emit)
+        self.open_database_button.clicked.connect(self.open_mLCA_db)
+        #self.new_database_button.clicked.connect(signals.new_modular_database.emit) #TODO this should just start an empty ModuleDatabaseTable from ModularDatabaseWidget
         #self.delete_database_button.clicked.connect(signals.delete_modular_database.emit)
-        #self.copy_database_button.clicked.connect(signals.copy_modular_database.emit)
+        #self.copy_database_button.clicked.connect(signals.copy_modular_database.emit) #TODO should allow re-name
+
+    def open_mLCA_db(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Select mLCA module database file')
+        #TODO should I link to a 'manager' instead?
+
+        f_name, _ = os.path.splitext(path)
+        print('+++', f_name)
+        #TODO how does this path look and how to extract only the name on all OS?
+        self.db_name_widget.setText(path)
+        LinkedMetaProcessSystem.load_from_file(self, filepath=path)
 
     def construct_layout(self):
         h_widget = QtWidgets.QWidget()
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addWidget(header('Databases:'))
-        h_layout.addWidget(QtWidgets.QLabel('>>Database chooser goes here<<'))  #TODO replace with ModuleDatabaseListWidget
+        h_layout.addWidget(self.db_name_widget)
+        h_layout.addWidget(self.open_database_button)
         h_layout.addWidget(self.new_database_button)
         h_layout.addWidget(self.copy_database_button)
         h_layout.addWidget(self.delete_database_button)
@@ -157,7 +175,6 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         else:
             self.new_module_button.show()
             self.table.show()
-
 
 class ModuleWidget(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -233,4 +250,5 @@ class ModuleWidget(QtWidgets.QWidget):
     def update_table(self, db_name=''):
         if self.outputs_table.database_name: #TODO how to do this with three tables?
             self.show()
-        self.label_module.setText("[{}]".format(db_name))
+        #TODO fix label_module missing
+        #self.label_module.setText("[{}]".format(db_name))
