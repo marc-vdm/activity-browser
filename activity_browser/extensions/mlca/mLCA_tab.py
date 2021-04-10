@@ -10,7 +10,7 @@ from activity_browser.ui.tables import (
     ActivitiesBiosphereTable,
 ) #TODO remove when all three tables have been removed
 from activity_browser.signals import signals
-from .linkedmetaprocess import LinkedMetaProcessSystem
+from .modularsystem import ModularSystem
 from .mLCA_tables import (
     ModuleDatabaseListWidget,
     ModuleDatabaseTable,
@@ -105,7 +105,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         print('+++', f_name)
         #TODO how does this path look and how to extract only the name on all OS?
         self.db_name_widget.setText(path)
-        LinkedMetaProcessSystem.load_from_file(self, filepath=path)
+        ModularSystem.load_from_file(self, filepath=path)
 
     def construct_layout(self):
         h_widget = QtWidgets.QWidget()
