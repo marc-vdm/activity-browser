@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
 from bw2data.utils import recursive_str_to_unicode
+from activity_browser.bwutils import AB_metadata
 import itertools
 import numpy as np
 import uuid
@@ -69,7 +70,7 @@ class Module(object):
         """
         output = {}
         for name in depending_databases:
-            db = bw.Database(name).load()
+            db = AB_metadata.get_database_metadata(name)
             output.update(
                 dict([(k, v) for k, v in db.items() if k in chain])
             )
@@ -173,9 +174,9 @@ class Module(object):
                 diagonal_value = 1.0
             else:
                 try:
-                    ds = bw.Database(key[0]).load()[key]
                     # amount does not work for ecoinvent 2.2 multioutput as co-products are not in exchanges
-                    diagonal_value = [exc.get('amount', '') for exc in ds['exchanges'] if exc['type'] == "production"][0]
+                    diagonal_value = [exc.as_dict().get('amount', '') for exc in bw.get_activity(key).exchanges() if
+                                      exc.as_dict()['type'] == 'production'][0]
                 except IndexError:
                     print("\nNo production exchange (output) found. Output is set to 1.0 for:", self.name)
                     print("--> This may be an ecoinvent 2.2 multi-output activity. " \
