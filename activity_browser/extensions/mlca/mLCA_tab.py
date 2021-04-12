@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtCore, QtWidgets
-import os
+from pathlib import Path
 
 from activity_browser.ui.style import header
 from activity_browser.ui.icons import qicons
@@ -101,16 +101,16 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             self, 'Select mLCA module database file')
         #TODO should I link to a 'manager' instead?
 
-        f_name, _ = os.path.splitext(path)
+        f_name = Path(path).stem
         print('+++', f_name)
         #TODO how does this path look and how to extract only the name on all OS?
-        self.db_name_widget.setText(path)
+        self.db_name_widget.setText(f_name)
         ModularSystem.load_from_file(self, filepath=path)
 
     def construct_layout(self):
         h_widget = QtWidgets.QWidget()
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addWidget(header('Databases:'))
+        h_layout.addWidget(header('Database:'))
         h_layout.addWidget(self.db_name_widget)
         h_layout.addWidget(self.open_database_button)
         h_layout.addWidget(self.new_database_button)
