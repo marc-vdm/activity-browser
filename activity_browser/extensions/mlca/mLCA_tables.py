@@ -2,35 +2,7 @@ from ...ui.tables.views import ABDataFrameView
 from .mLCA_table_models import ModuleDatabaseModel
 
 from PySide2 import QtWidgets
-from PySide2.QtWidgets import QComboBox
 from activity_browser.signals import signals
-
-
-class ModuleDatabaseListWidget(QComboBox):
-    """ TODO description
-    """
-    def __init__(self):
-        super(ModuleDatabaseListWidget, self).__init__()
-        self.connect_signals()
-        self.project_names = None
-
-    def connect_signals(self):
-        self.activated.connect(self.on_activated)
-        signals.project_selected.connect(self.sync)
-        signals.projects_changed.connect(self.sync)
-
-    def sync(self):
-        #TODO implement
-        pass
-        """
-        self.clear()
-        self.project_names = sorted([project.name for project in projects])
-        self.addItems(self.project_names)
-        index = self.project_names.index(projects.current)
-        self.setCurrentIndex(index)"""
-
-    def on_activated(self, index):
-        signals.change_project.emit(self.project_names[index])
 
 
 class ModuleDatabaseTable(ABDataFrameView):

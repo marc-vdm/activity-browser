@@ -12,9 +12,10 @@ from activity_browser.ui.tables import (
 from activity_browser.signals import signals
 from .modularsystem import ModularSystem
 from .mLCA_tables import (
-    ModuleDatabaseListWidget,
     ModuleDatabaseTable,
 )
+
+from .mLCA_signals import mlca_signals
 
 
 class mLCATab(QtWidgets.QWidget):
@@ -41,8 +42,18 @@ class mLCATab(QtWidgets.QWidget):
 
     def connect_signals(self):
         #TODO revise signals
-        signals.project_selected.connect(self.change_project)
-        signals.database_selected.connect(self.update_widgets)
+        mlca_signals.change_database.connect(self.change_database)
+        #signals.project_selected.connect(self.change_project)
+        #signals.database_selected.connect(self.update_widgets)
+        pass
+
+    @QtCore.Slot(str, name='mlcaDbChanged')
+    def change_database(self, db_data: tuple) -> None:
+
+        db_name, state = db_data
+        print('+++ signal was connected ', db_name, state)
+
+        mlca_signals.change_database.emit((db_name, state))
 
     def change_project(self):
         self.update_widgets()
@@ -84,7 +95,8 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.delete_database_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.delete_database_button.setToolTip('Delete the modular database')
 
-        self.db_name_widget = QtWidgets.QLabel('Open a Modular Database or Start a new one')
+        self.db_name = 'Open a Modular Database or start a new one'
+        self.db_name_widget = QtWidgets.QLabel(self.db_name)
 
         self.connect_signals()
         self.construct_layout()
@@ -92,20 +104,43 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
     def connect_signals(self):
         pass
         self.open_database_button.clicked.connect(self.open_mLCA_db)
-        #self.new_database_button.clicked.connect(signals.new_modular_database.emit) #TODO this should just start an empty ModuleDatabaseTable from ModularDatabaseWidget
-        #self.delete_database_button.clicked.connect(signals.delete_modular_database.emit)
-        #self.copy_database_button.clicked.connect(signals.copy_modular_database.emit) #TODO should allow re-name
+        self.new_database_button.clicked.connect(self.new_mLCA_db)
+        self.copy_database_button.clicked.connect(self.copy_mLCA_db)
+        self.delete_database_button.clicked.connect(self.delete_mLCA_db)
 
     def open_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, 'Select mLCA module database file')
-        #TODO should I link to a 'manager' instead?
 
         f_name = Path(path).stem
-        print('+++', f_name)
-        #TODO how does this path look and how to extract only the name on all OS?
+
         self.db_name_widget.setText(f_name)
-        ModularSystem.load_from_file(self, filepath=path)
+        #ModularSystem.load_from_file(self, filepath=path) #TODO move to table model and link to signal below
+
+        mlca_signals.change_database.emit((path, 'open'))
+
+    def new_mLCA_db(self):
+        #TODO dialog to place empty file somewhere
+        pass
+        path = 'WARNING: NOT IMPLEMENTED'
+        print('+++ starting mLCa database:', path)
+        #mlca_signals.change_database.emit((path, 'new'))
+
+    def copy_mLCA_db(self):
+        # TODO dialog to copy file somewhere
+        #TODO should allow for rename
+        pass
+        path = 'WARNING: NOT IMPLEMENTED'
+        print('+++ copying mLCa database:', path)
+        # mlca_signals.change_database.emit((path, 'copy'))
+
+    def delete_mLCA_db(self):
+        # TODO dialog to delete file somehow
+        #TODO should ask for confirmation
+        pass
+        path = 'WARNING: NOT IMPLEMENTED'
+        print('+++ deleting mLCa database:', path)
+        # mlca_signals.change_database.emit((path, 'delete'))
 
     def construct_layout(self):
         h_widget = QtWidgets.QWidget()
