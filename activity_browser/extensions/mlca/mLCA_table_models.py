@@ -1,7 +1,8 @@
 from ...ui.tables.models import PandasModel
+import brightway2 as bw
 from activity_browser.signals import signals
 
-from PySide2.QtCore import QModelIndex
+from PySide2.QtCore import QModelIndex, Slot
 import pandas as pd
 from pathlib import Path
 
@@ -21,10 +22,14 @@ class ModuleDatabaseModel(PandasModel):
         super().__init__(parent=parent)
 
         self.db_path = None
-        self.mlca_db = None
+        self.mlca_db = ModularSystem()
 
+        self.connect_signals()
+
+    def connect_signals(self):
         #signals.module_selected.connect(self.sync)
         #signals.module_changed.connect(self.sync)
+
         mlca_signals.change_database.connect(self.sync)
 
     def get_module_name(self, proxy: QModelIndex) -> str:
@@ -32,20 +37,51 @@ class ModuleDatabaseModel(PandasModel):
         return self._dataframe.iat[idx.row(), 0]
 
     def open_mlca_db(self, path) -> None:
-        self.mlca_db = ModularSystem.load_from_file(self, filepath=path)
+        self.mlca_db.load_from_file(filepath=path)
 
-    def sync(self, db_data):
+    def convert_pandas(self):
+        data = []
+        for mp_data in self.mlca_db.raw_data:
+            numbers = [len(mp_data['outputs']), len(set(mp_data['chain'])), len(set(mp_data['cuts']))]
+
+            print('+++\n', {'chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']])})
+            data.append({
+                'Name': mp_data['name'],
+                'out/chain/cuts': ", ".join(map(str, numbers)),
+                'Outputs': ", ".join([o[1] for o in mp_data['outputs']]),
+                'Chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']]),
+                'Cuts': ", ".join(set([c[2] for c in mp_data['cuts']])),
+            })
+
+    @Slot(tuple, name='mlcaDbChanged')
+    def sync(self, db_data: tuple) -> None:
         pass
         #TODO implement some sync based on old sync below
         # Data should be pulled in here from the right mlca file
-
         db_path, state = db_data
         f_name = Path(db_path).stem
 
         if state == 'open':
-
             # open the db
+            """ We don't check whether the mLCA DB was already open, as the mLCA DB could have been changed outside 
+            of AB. As the background (ecoinvent) DB was already opened (and in meta-data store), re-opening the mLCA 
+            DB should take very little time."""
             self.open_mlca_db(db_path)
+
+            # make data table-ready
+            data = []
+            for mp_data in self.mlca_db.raw_data:
+                numbers = [len(mp_data['outputs']), len(set(mp_data['chain'])), len(set(mp_data['cuts']))]
+
+                data.append({
+                    'Name': mp_data['name'],
+                    'out/chain/cuts': ", ".join(map(str, numbers)),
+                    'Outputs': ", ".join([o[1] for o in mp_data['outputs']]),
+                    'Chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']]),
+                    'Cuts': ", ".join(set([c[2] for c in mp_data['cuts']])),
+                })
+            self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
+            self.updated.emit()
 
             # set current db_path name
             self.db_path = db_path
@@ -58,17 +94,24 @@ class ModuleDatabaseModel(PandasModel):
         elif state == 'copy':
             pass
 
+            # some code to copy the db
+            # then just call sync again with open command and new file
+
             print('+++ Copied mLCa database:', f_name)
         elif state == 'delete':
-            pass
 
-            print('+++ Deleted mLCa database:', f_name)
             # check if current db is being deleted -> make sure table is hidden and DB label reset
             # else: remove the db silently
+            if db_path == self.db_path:
+                pass
+            else:
+                pass
+            print('+++ Deleted mLCa database:', f_name)
         else:
             raise Exception('Not implemented error - >{}< keyword is not implemented'.format(state))
 
         #TODO code here should make table visible from the DB above
+
 
 
         """

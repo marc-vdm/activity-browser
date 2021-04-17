@@ -47,13 +47,13 @@ class mLCATab(QtWidgets.QWidget):
         #signals.database_selected.connect(self.update_widgets)
         pass
 
-    @QtCore.Slot(str, name='mlcaDbChanged')
+    @QtCore.Slot(tuple, name='mlcaDbChanged')
     def change_database(self, db_data: tuple) -> None:
 
         db_name, state = db_data
         print('+++ signal was connected ', db_name, state)
 
-        mlca_signals.change_database.emit((db_name, state))
+        #mlca_signals.change_database.emit((db_name, state))
 
     def change_project(self):
         self.update_widgets()
@@ -114,7 +114,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 
         f_name = Path(path).stem
 
-        self.db_name_widget.setText(f_name)
+        self.db_name_widget.setText(f_name) #TODO replace this with commontasks function as soon as it is merged
         #ModularSystem.load_from_file(self, filepath=path) #TODO move to table model and link to signal below
 
         mlca_signals.change_database.emit((path, 'open'))
@@ -168,7 +168,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.table = DatabasesTable() #TODO replace with ModuleDatabaseTable
+        self.table = ModuleDatabaseTable()
 
         # Labels
         self.label_no_module_selected = QtWidgets.QLabel(
