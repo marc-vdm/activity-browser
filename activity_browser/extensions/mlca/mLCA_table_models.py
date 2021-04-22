@@ -61,6 +61,8 @@ class ModuleDatabaseModel(PandasModel):
         db_path, state = db_data
         f_name = Path(db_path).stem
 
+        #TODO enable some check that if a current DB is loaded that user is asked to save before just overwriting their stuff
+
         if state == 'open':
             # open the db
             """ We don't check whether the mLCA DB was already open, as the mLCA DB could have been changed outside 
@@ -81,16 +83,24 @@ class ModuleDatabaseModel(PandasModel):
                     'Cuts': ", ".join(set([c[2] for c in mp_data['cuts']])),
                 })
             self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
-            self.updated.emit()
-
-            # set current db_path name
+            # set new db_path name
             self.db_path = db_path
+
+            self.updated.emit()
 
             print('+++ Opened mLCa database:', f_name)
         elif state == 'new':
-            pass
+            # set new db_path name
+            if not db_path.endswith('.pickle') and not db_path.endswith('.mlca'):
+                db_path += '.mlca'
+            self.db_path = db_path
 
-            print('+++ Created new mLCa database:', f_name)
+            print('+++ Created new mLCa database:', self.db_path)
+
+            self.mlca_db = ModularSystem()
+
+            self.updated.emit()
+
         elif state == 'copy':
             pass
 
