@@ -10,6 +10,8 @@ from activity_browser.ui.tables import (
     ActivitiesBiosphereTable,
 ) #TODO remove when all three tables have been removed
 from activity_browser.signals import signals
+from activity_browser.bwutils.commontasks import update_and_shorten_label
+
 from .modularsystem import ModularSystem
 from .mLCA_tables import (
     ModuleDatabaseTable,
@@ -96,7 +98,8 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.delete_database_button.setToolTip('Delete the modular database')
 
         self.db_name = 'Open a Modular Database or start a new one'
-        self.db_name_widget = QtWidgets.QLabel(self.db_name)
+        self.db_name_default_label = self.db_name
+        self.db_name_widget = QtWidgets.QLabel('[{}]'.format(self.db_name))
 
         self.mlca_file_types = 'mLCA files (*.pickle *.mlca)'
 
@@ -110,6 +113,16 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.copy_database_button.clicked.connect(self.copy_mLCA_db)
         self.delete_database_button.clicked.connect(self.delete_mLCA_db)
 
+    def update_state_mLCA_db(self, path, state):
+        if path:
+            self.db_name = Path(path).stem
+
+            update_and_shorten_label(self.db_name_widget, self.db_name)
+            mlca_signals.change_database.emit((path, state))
+        else:
+            # the loading was either canceled or failed somehow
+            update_and_shorten_label(self.db_name_widget, self.db_name_default_label, enable=False)
+
     def open_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
@@ -117,14 +130,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             filter=self.mlca_file_types)
         #TODO set default folder with 'dir=..' argument when we have one
 
-        if path:
-            f_name = Path(path).stem
-
-            self.db_name_widget.setText(f_name) #TODO replace this with commontasks function as soon as it is merged
-            mlca_signals.change_database.emit((path, 'open'))
-        else:
-            # the loading was either cancelled or failed somehow
-            pass
+        self.update_state_mLCA_db(path, 'open')
 
     def new_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -132,8 +138,7 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             caption='Create a new mLCA module database file',
             filter=self.mlca_file_types)
 
-        print('+++ starting mLCa database:', path)
-        mlca_signals.change_database.emit((path, 'new'))
+        self.update_state_mLCA_db(path, 'new')
 
     def copy_mLCA_db(self):
         # TODO dialog to copy file somewhere
