@@ -98,6 +98,8 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.db_name = 'Open a Modular Database or start a new one'
         self.db_name_widget = QtWidgets.QLabel(self.db_name)
 
+        self.mlca_file_types = 'mLCA files (*.pickle *.mlca)'
+
         self.connect_signals()
         self.construct_layout()
 
@@ -110,21 +112,28 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 
     def open_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, 'Select mLCA module database file')
+            self,
+            caption='Select mLCA module database file',
+            filter=self.mlca_file_types)
+        #TODO set default folder with 'dir=..' argument when we have one
 
-        f_name = Path(path).stem
+        if path:
+            f_name = Path(path).stem
 
-        self.db_name_widget.setText(f_name) #TODO replace this with commontasks function as soon as it is merged
-        #ModularSystem.load_from_file(self, filepath=path) #TODO move to table model and link to signal below
-
-        mlca_signals.change_database.emit((path, 'open'))
+            self.db_name_widget.setText(f_name) #TODO replace this with commontasks function as soon as it is merged
+            mlca_signals.change_database.emit((path, 'open'))
+        else:
+            # the loading was either cancelled or failed somehow
+            pass
 
     def new_mLCA_db(self):
-        #TODO dialog to place empty file somewhere
-        pass
-        path = 'WARNING: NOT IMPLEMENTED'
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            caption='Create a new mLCA module database file',
+            filter=self.mlca_file_types)
+
         print('+++ starting mLCa database:', path)
-        #mlca_signals.change_database.emit((path, 'new'))
+        mlca_signals.change_database.emit((path, 'new'))
 
     def copy_mLCA_db(self):
         # TODO dialog to copy file somewhere
