@@ -62,6 +62,7 @@ class ModuleDatabaseModel(PandasModel):
         f_name = Path(db_path).stem
 
         #TODO enable some check that if a current DB is loaded that user is asked to save before just overwriting their stuff
+        # this check should give 4 options: discard (throw away changes), save, save as & cancel (stop 'leaving' current db)
 
         if state == 'open':
             # open the db
@@ -99,15 +100,8 @@ class ModuleDatabaseModel(PandasModel):
 
             self.mlca_db = ModularSystem()
 
-            self.updated.emit()
+            self.sync((self.db_path, 'save'))
 
-        elif state == 'copy':
-            pass
-
-            # some code to copy the db
-            # then just call sync again with open command and new file
-
-            print('+++ Copied mLCa database:', f_name)
         elif state == 'delete':
 
             # check if current db is being deleted -> make sure table is hidden and DB label reset
@@ -117,6 +111,17 @@ class ModuleDatabaseModel(PandasModel):
             else:
                 pass
             print('+++ Deleted mLCa database:', f_name)
+
+        elif state == 'save':
+            self.mlca_db.save_to_file(filepath=db_path)
+
+            # some code to copy the db
+            # then just call sync again with open command and new file
+
+            print('+++ Saved mLCa database:', f_name)
+
+            self.updated.emit()
+
         else:
             raise Exception('Not implemented error - >{}< keyword is not implemented'.format(state))
 
