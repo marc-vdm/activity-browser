@@ -16,9 +16,13 @@ from .modularsystem import ModularSystem
 from .mLCA_tables import (
     ModuleDatabaseTable,
 )
+from .mlca_icons import mlca_qicons
 
 from .mLCA_signals import mlca_signals
 
+#TODO: when no DB is open, hide the databases section
+#TODO: when an empty DB is open, show toolbar but no table
+#TODO: when a DB with items is open, show table (and tools??)
 
 class mLCATab(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -92,14 +96,18 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         self.open_database_button.setToolTip('Open an existing modular database')
         self.new_database_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_database_button.setToolTip('Add a new modular database')
-        self.copy_database_button = QtWidgets.QPushButton(qicons.copy, "Copy")
-        self.copy_database_button.setToolTip('Copy the modular database')
         self.delete_database_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.delete_database_button.setToolTip('Delete the modular database')
+        self.save_database_button = QtWidgets.QPushButton(mlca_qicons.save_db, "Save")
+        self.save_database_button.setToolTip('Save the modular database')
+        self.save_database_button.setVisible(False)
+        self.saveas_database_button = QtWidgets.QPushButton(mlca_qicons.save_db, "Save as")
+        self.saveas_database_button.setToolTip('Save the modular database to a different file')
+        self.saveas_database_button.setVisible(False)
 
-        self.db_name = 'Open a Modular Database or start a new one'
-        self.db_name_default_label = self.db_name
-        self.db_name_widget = QtWidgets.QLabel('[{}]'.format(self.db_name))
+        self.db_name = None
+        self.db_name_default_label = 'Open a Modular Database or start a new one'
+        self.db_name_widget = QtWidgets.QLabel('[{}]'.format(self.db_name_default_label))
 
         self.mlca_file_types = 'mLCA files (*.pickle *.mlca)'
 
@@ -110,8 +118,9 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
         pass
         self.open_database_button.clicked.connect(self.open_mLCA_db)
         self.new_database_button.clicked.connect(self.new_mLCA_db)
-        self.copy_database_button.clicked.connect(self.copy_mLCA_db)
         self.delete_database_button.clicked.connect(self.delete_mLCA_db)
+        self.save_database_button.clicked.connect(self.save_mLCA_db)
+        self.saveas_database_button.clicked.connect(self.saveas_mLCA_db)
 
     def update_state_mLCA_db(self, path, state):
         if path:
@@ -121,7 +130,17 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             mlca_signals.change_database.emit((path, state))
         else:
             # the loading was either canceled or failed somehow
-            update_and_shorten_label(self.db_name_widget, self.db_name_default_label, enable=False)
+            if self.db_name:
+                update_and_shorten_label(self.db_name_widget, self.db_name)
+            else:
+                update_and_shorten_label(self.db_name_widget, self.db_name_default_label, enable=False)
+
+        if self.db_name:
+            self.save_database_button.setVisible(True)
+            self.saveas_database_button.setVisible(True)
+        else:
+            self.save_database_button.setVisible(False)
+            self.saveas_database_button.setVisible(False)
 
     def open_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -140,37 +159,51 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
 
         self.update_state_mLCA_db(path, 'new')
 
-    def copy_mLCA_db(self):
-        # TODO dialog to copy file somewhere
-        #TODO should allow for rename
-        pass
-        path = 'WARNING: NOT IMPLEMENTED'
-        print('+++ copying mLCa database:', path)
-        # mlca_signals.change_database.emit((path, 'copy'))
-
     def delete_mLCA_db(self):
         # TODO dialog to delete file somehow
         #TODO should ask for confirmation
         pass
         path = 'WARNING: NOT IMPLEMENTED'
         print('+++ deleting mLCa database:', path)
-        # mlca_signals.change_database.emit((path, 'delete'))
+        mlca_signals.change_database.emit((self.db_name, 'delete'))
+
+    def save_mLCA_db(self):
+        self.update_state_mLCA_db(self.db_name, 'save')
+
+    def saveas_mLCA_db(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            caption='Save your mLCA module database file',
+            filter=self.mlca_file_types)
+
+        # send same signal to save, as only path is required to be different
+        self.update_state_mLCA_db(path, 'save')
 
     def construct_layout(self):
-        h_widget = QtWidgets.QWidget()
-        h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addWidget(header('Database:'))
-        h_layout.addWidget(self.db_name_widget)
-        h_layout.addWidget(self.open_database_button)
-        h_layout.addWidget(self.new_database_button)
-        h_layout.addWidget(self.copy_database_button)
-        h_layout.addWidget(self.delete_database_button)
-        h_widget.setLayout(h_layout)
+        # header
+        header_widget = QtWidgets.QWidget()
+        header_layout = QtWidgets.QHBoxLayout()
+        header_layout.addWidget(header('Database:'))
+        header_layout.addWidget(self.db_name_widget)
+        header_layout.addStretch(1)
+        header_widget.setLayout(header_layout)
+
+        # buttons
+        button_widget = QtWidgets.QWidget()
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.addWidget(self.open_database_button)
+        button_layout.addWidget(self.new_database_button)
+        button_layout.addWidget(self.delete_database_button)
+        button_layout.addWidget(self.save_database_button)
+        button_layout.addWidget(self.saveas_database_button)
+        button_layout.addStretch(1)
+        button_widget.setLayout(button_layout)
 
         # Overall Layout
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
-        layout.addWidget(h_widget)
+        layout.addWidget(header_widget)
+        layout.addWidget(button_widget)
         self.setLayout(layout)
 
         self.setSizePolicy(QtWidgets.QSizePolicy(

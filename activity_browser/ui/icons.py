@@ -5,6 +5,8 @@ from PySide2.QtGui import QIcon
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 
+print('>>',PACKAGE_DIR)
+
 
 def create_path(folder: str, filename: str) -> str:
     """ Builds a path to the image file.
