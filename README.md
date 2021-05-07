@@ -43,6 +43,7 @@ Watch our videos on [youtube](https://www.youtube.com/channel/UCsyySKrzEMsRFsWW1
     - [Miniconda](#miniconda)
     - [Configure conda channels](#configure-conda-channels)
     - [Install the activity browser](#install-the-activity-browser)
+    - [Updating the activity browser](#updating-the-activity-browser)
     - [Development Version](#development-version)
     - [Important Notice: the AB switched from PyQt5 to PySide2](#important-notice-the-ab-switched-from-pyqt5-to-pyside2)
         - [Why?](#why)
@@ -58,15 +59,15 @@ Watch our videos on [youtube](https://www.youtube.com/channel/UCsyySKrzEMsRFsWW1
 
 ## Installation
 
-### Miniconda
+### Anaconda / Miniconda
 
-Install the newest python 3 version of [miniconda](https://conda.io/miniconda.html) for your operating system. Detailed installation instructions for miniconda can be found [here](https://conda.io/docs/user-guide/install/index.html).
+We recommend that you use **conda** to manage your python installation. You can install [Anaconda](https://www.anaconda.com/products/individual) or the more compact [miniconda](https://conda.io/miniconda.html) (Python 3 of course) for your operating system. Installation instructions for miniconda can be found [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html). See also the [conda user guide](https://docs.conda.io/projects/conda/en/latest/user-guide/index.html) or the [Conda cheat sheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf).
 
 Skip this step if you already have a working installation of anaconda or miniconda, but make sure to keep your conda installation up-to-date: `conda update conda`.
 
 ### Configure conda channels
 
-The activity-browser has many dependencies and you need to add five [conda channels](https://conda.io/docs/user-guide/tasks/manage-channels.html) to your configuration file so conda can find all of them. Open a cmd-window or terminal and type the following (order is important):
+The activity-browser has many dependencies and you need to add five [conda channels](https://conda.io/docs/user-guide/tasks/manage-channels.html) to your configuration file so conda can find all of them. Open a cmd-window or terminal (in Windows you may have to use the Anaconda prompt) and type the following (order is important):
 
 ```bash
 conda config --append channels conda-forge
@@ -100,6 +101,15 @@ This will install the activity-browser and all of its dependencies in a new cond
 
 It is recommended that you have a separate conda environment for the activity browser like explained above, but you can also install the activity browser in your root, brightway2 or other existing conda environment if you prefer. Having separate environments for different projects generally reduces unwanted side-effects and incompatibilities between packages. You can still access the same brightway-projects even if you work with different conda environments.
 
+### Updating the activity browser
+
+You may want to update the activity browser to receive new features & bugfixes:
+
+```bash
+conda update -n ab --channel conda-forge activity-browser
+```
+
+This will update the activity-browser and all of its dependencies in the conda environment called `ab`.
 
 ## Development Version
 [![Anaconda-Server Badge](https://anaconda.org/bsteubing/activity-browser-dev/badges/version.svg)](https://anaconda.org/bsteubing/activity-browser-dev) [![Anaconda-Server Badge](https://anaconda.org/bsteubing/activity-browser-dev/badges/downloads.svg)](https://anaconda.org/bsteubing/activity-browser-dev)
