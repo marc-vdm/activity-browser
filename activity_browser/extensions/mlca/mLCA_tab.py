@@ -15,6 +15,7 @@ from activity_browser.bwutils.commontasks import update_and_shorten_label
 from .modularsystem import ModularSystem
 from .mLCA_tables import (
     ModuleDatabaseTable,
+    ModuleChainTable
 )
 from .mlca_icons import mlca_qicons
 
@@ -23,6 +24,7 @@ from .mLCA_signals import mlca_signals
 #TODO: when no DB is open, hide the databases section
 #TODO: when an empty DB is open, show toolbar but no table
 #TODO: when a DB with items is open, show table (and tools??)
+#TODO: also disable table refreshing when required!
 
 class mLCATab(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -142,6 +144,11 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             self.save_database_button.setVisible(False)
             self.saveas_database_button.setVisible(False)
 
+        if state == 'delete':
+            mlca_signals.database_selected.emit(False)
+        else:
+            mlca_signals.database_selected.emit(True)
+
     def open_mLCA_db(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
@@ -226,12 +233,26 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_module_button.setToolTip('Add a new module')
 
+        self.toolbar = QtWidgets.QLabel('Toolbar goes here')
+
         self._construct_layout()
         self._connect_signals()
+        self.hide()
 
     def _connect_signals(self):
         pass
-        #self.new_module_button.clicked.connect(signals.add_module.emit)
+        mlca_signals.database_selected.connect(self.db_change)
+        #self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+
+    def db_change(self, selected):
+        if selected:
+            self.update_widget()
+        else:
+            self.reset_widget()
+
+    def reset_widget(self):
+        self.hide()
+        self.table.model.clear()
 
     def _construct_layout(self):
         header_widget = QtWidgets.QWidget()
@@ -246,16 +267,18 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
         layout.addWidget(header_widget)
+        layout.addWidget(self.toolbar)
         layout.addWidget(self.table)
         self.setLayout(layout)
 
     def update_widget(self):
+        self.show()
         no_modules = self.table.rowCount() == 0
         if no_modules:
-            self.new_module_button.hide()
+            self.toolbar.hide()
             self.table.hide()
         else:
-            self.new_module_button.show()
+            self.toolbar.show()
             self.table.show()
 
 class ModuleWidget(QtWidgets.QWidget):
@@ -263,6 +286,7 @@ class ModuleWidget(QtWidgets.QWidget):
         super(ModuleWidget, self).__init__(parent)
 
         self.outputs_table = ActivitiesBiosphereTable(self) #TODO replace with module outputs table
+        #self.chain_table = ModuleChainTable(self)  # TODO replace with module chain table
         self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
         self.cuts_table = ActivitiesBiosphereTable(self)  # TODO replace with module cuts table/tree
 
@@ -272,8 +296,6 @@ class ModuleWidget(QtWidgets.QWidget):
         self.header_layout.setAlignment(QtCore.Qt.AlignLeft)
         self.header_layout.addWidget(header('Module:'))
         self.header_widget.setLayout(self.header_layout)
-
-        signals.database_selected.connect(self.update_table) #TODO replace database_selected with module_selected on right table
 
         # name widget
         self.name_widget = QtWidgets.QWidget()
@@ -291,9 +313,13 @@ class ModuleWidget(QtWidgets.QWidget):
 
         self.construct_layout()
         self.connect_signals()
+        self.hide()
 
     def connect_signals(self):
-        signals.project_selected.connect(self.reset_widget)
+        pass
+        mlca_signals.database_selected.connect(self.reset_widget)
+
+        mlca_signals.module_selected.connect(self.update_table)
 
     def construct_layout(self):
         # Overall Layout
