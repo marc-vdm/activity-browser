@@ -7,5 +7,10 @@ class MlcaSignals(QObject):
 
     # mlca db change
     change_database = Signal(tuple) # carries tuple of db_name (path) and the command (open/new/copy/delete)
+    database_selected = Signal(bool)
+
+    # modules
+    new_module = Signal()
+    module_selected = Signal()
 
 mlca_signals = MlcaSignals()

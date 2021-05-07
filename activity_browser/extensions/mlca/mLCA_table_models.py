@@ -27,7 +27,7 @@ class ModuleDatabaseModel(PandasModel):
         self.connect_signals()
 
     def connect_signals(self):
-        #signals.module_selected.connect(self.sync)
+        mlca_signals.module_selected.connect(self.sync)
         #signals.module_changed.connect(self.sync)
 
         mlca_signals.change_database.connect(self.sync)
@@ -151,3 +151,32 @@ class ModuleDatabaseModel(PandasModel):
 
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.updated.emit()"""
+
+
+class ModuleChainModel(PandasModel):
+    HEADERS = ["product", "name", "location", "amount", "unit", "database"]
+
+    def __init__(self, parent=None, module=None):
+        super().__init__(parent=parent)
+
+        self.module = module
+
+        self.connect_signals()
+
+    def connect_signals(self):
+        pass
+
+    def get_SOMETHING_name(self, proxy: QModelIndex) -> str:
+        #TODO replace SOMETHING name
+        idx = self.proxy_to_source(proxy)
+        return self._dataframe.iat[idx.row(), 0]
+
+    def open_mlca_db(self, path) -> None:
+        self.mlca_db.load_from_file(filepath=path)
+
+    def convert_pandas(self):
+        data = []
+
+    @Slot(tuple, name='mlcaDbChanged')
+    def sync(self, db_data: tuple) -> None:
+        pass
