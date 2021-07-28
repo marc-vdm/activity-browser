@@ -116,6 +116,12 @@ class ActivityTab(QtWidgets.QWidget):
         self.checkbox_comment.setChecked(False)
         self.checkbox_comment.toggled.connect(self.show_comments)
 
+        # Reveal/hide module data
+        self.show_modules = QtWidgets.QCheckBox("Show Modules")
+        self.show_modules.setToolTip("Show or hide the module information")
+        self.show_modules.setChecked(True)
+        self.show_modules.toggled.connect(self.show_modules_data)
+
         # Toolbar Layout
         toolbar = QtWidgets.QToolBar()
         self.graph_action = toolbar.addAction(
@@ -224,6 +230,11 @@ class ActivityTab(QtWidgets.QWidget):
     def show_comments(self, toggled: bool) -> None:
         self.technosphere.show_comments(toggled)
         self.biosphere.show_comments(toggled)
+
+    @Slot(bool, name="toggleModules")
+    def show_modules_data(self, toggled: bool) -> None:
+        print('Module data button toggled to:', toggled)
+        self.activity_data_grid.hide_show_module_data(toggled)
 
     @Slot(bool, name="toggleReadOnly")
     def act_read_only_changed(self, read_only: bool) -> None:
