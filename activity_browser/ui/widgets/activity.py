@@ -81,6 +81,19 @@ class ActivityDataGrid(QtWidgets.QWidget):
             lambda target_db: self.duplicate_confirm_dialog(target_db))
         self.database_combo.setToolTip("Use dropdown menu to duplicate activity to another database")
 
+        # module label
+        self.module_label = QtWidgets.QLabel('Modules')
+        self.module_label.setToolTip("Start a new or add this unit process to a module")
+
+        # module combobox
+        # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new module
+        self.module_combo = QtWidgets.QComboBox()
+        self.module_combo.setToolTip("Use dropdown menu to start a new or add this unit process to a module")
+
+        # module field
+        self.module_field = QtWidgets.QLabel('Placeholder')
+        self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
+
         # arrange widgets for display as a grid
         self.grid = QtWidgets.QGridLayout()
 
@@ -95,6 +108,9 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.grid.addWidget(self.location_combo, 2, 2, 1, -1)
         self.grid.addWidget(self.database_combo, 3, 2, 1, -1)
         self.grid.addWidget(self.database_label, 3, 1)
+        self.grid.addWidget(self.module_label, 4, 1)
+        self.grid.addWidget(self.module_combo, 4, 2)
+        self.grid.addWidget(self.module_field, 4, 3)
 
         self.setLayout(self.grid)
 
@@ -185,3 +201,9 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.read_only = read_only
         self.name_box.setReadOnly(self.read_only)
         self.location_combo.setEnabled(not self.read_only)
+
+    def hide_show_module_data(self, toggled=False):
+        self.module_label.setVisible(toggled)
+        self.module_combo.setVisible(toggled)
+        self.module_field.setVisible(toggled)
+

@@ -110,11 +110,18 @@ class ActivityTab(QtWidgets.QWidget):
         self.show_uncertainty.setChecked(False)
         self.show_uncertainty.toggled.connect(self.show_exchange_uncertainty)
 
+        # Reveal/hide module data
+        self.show_modules = QtWidgets.QCheckBox("Show Modules")
+        self.show_modules.setToolTip("Show or hide the module information")
+        self.show_modules.setChecked(True)
+        self.show_modules.toggled.connect(self.show_modules_data)
+
         # Toolbar Layout
         toolbar = QtWidgets.QToolBar()
         toolbar.addWidget(self.checkbox_edit_act)
         toolbar.addWidget(self.checkbox_activity_description)
         toolbar.addWidget(self.show_uncertainty)
+        toolbar.addWidget(self.show_modules)
         self.graph_action = toolbar.addAction(
             qicons.graph_explorer, "Show graph", self.open_graph
         )
@@ -209,6 +216,11 @@ class ActivityTab(QtWidgets.QWidget):
     def show_exchange_uncertainty(self, toggled: bool) -> None:
         self.technosphere.show_uncertainty(toggled)
         self.biosphere.show_uncertainty(toggled)
+
+    @Slot(bool, name="toggleModules")
+    def show_modules_data(self, toggled: bool) -> None:
+        print('Module data button toggled to:', toggled)
+        self.activity_data_grid.hide_show_module_data(toggled)
 
     @Slot(bool, name="toggleReadOnly")
     def act_read_only_changed(self, read_only: bool) -> None:
