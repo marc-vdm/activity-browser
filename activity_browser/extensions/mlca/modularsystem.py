@@ -6,7 +6,9 @@ import networkx as nx  # TODO: get rid of this dependency
 import numpy as np
 
 from .module import Module
-
+import brightway2 as bw
+import os
+from ...signals import signals
 
 class ModularSystem(object):
     """
@@ -426,3 +428,46 @@ class ModularSystem(object):
             for path in self.all_pathways(demand.keys()[0]):
                 path_lca_data.append(self.lca_linked_processes(method, path, demand))
             return path_lca_data
+
+class ModularSystemDataManager(object):
+    """Manages the data of the modular system.
+    Data manager takes care of saving data to the right place and opening the right modular systems"""
+    def __init__(self):
+        pass
+        self.project = bw.projects.current
+        self.project_folder = bw.projects.dir
+
+        self.get_modular_system_file()
+
+    def connect_signals(self):
+        signals.project_selected.connect(self.project_change)
+        pass
+
+    def project_change(self):
+        """Save and close modular system that was connected to other project and open current project's modular system"""
+        pass
+
+        self.get_modular_system_file()
+
+    def open_modular_system(self):
+        """If there is no modular system in project, make a new one, otherwise open the existing one"""
+        pass
+
+    def close_modular_system(self):
+        """Properly close (and save) modular system"""
+        pass
+
+    def get_modular_system_file(self):
+        """Return the modular system file, generate one if it does not exist yet"""
+        ms_dir = os.path.join(self.project_folder, 'modular_system')
+        ms_file = os.path.join(ms_dir, 'modular_system.mlca')
+
+        # check if folder exists, if not, generate it
+        if not os.path.isdir(ms_dir):
+            os.makedirs(ms_dir, exist_ok=True)
+
+        # check if file exists, if not, generate it
+        if not os.path.isfile(ms_file):
+            ModularSystem.save_to_file(ModularSystem(), filepath=ms_file)
+
+        self.modular_system_file = ms_file
