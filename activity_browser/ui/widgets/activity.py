@@ -135,7 +135,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
         if len(items) == 0: #TODO replace with actual list of relevant modules
             items = ['example']
 
-        items = ['', 'Add new Module'] + items
+        items = ['', 'Add to new Module'] + items
         self.module_combo.addItems(items)
 
 
