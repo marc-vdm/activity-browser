@@ -435,9 +435,11 @@ class ModularSystemDataManager(object):
     def __init__(self):
         pass
         self.project = bw.projects.current
+        self.old_project = bw.projects.current
         self.project_folder = bw.projects.dir
+        self.old_project_folder = bw.projects.dir
 
-        self.get_modular_system_file()
+        self.connect_signals()
 
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
@@ -447,17 +449,16 @@ class ModularSystemDataManager(object):
         """Save and close modular system that was connected to other project and open current project's modular system"""
         pass
 
-        self.get_modular_system_file()
-
     def open_modular_system(self):
         """If there is no modular system in project, make a new one, otherwise open the existing one"""
         pass
 
-    def close_modular_system(self):
+    def close_modular_system(self, save=True):
         """Properly close (and save) modular system"""
         pass
 
-    def get_modular_system_file(self):
+    @property
+    def modular_system_file(self):
         """Return the modular system file, generate one if it does not exist yet"""
         ms_dir = os.path.join(self.project_folder, 'modular_system')
         ms_file = os.path.join(ms_dir, 'modular_system.mlca')
@@ -470,4 +471,4 @@ class ModularSystemDataManager(object):
         if not os.path.isfile(ms_file):
             ModularSystem.save_to_file(ModularSystem(), filepath=ms_file)
 
-        self.modular_system_file = ms_file
+        return ms_file

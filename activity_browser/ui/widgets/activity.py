@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 from PySide2 import QtCore, QtWidgets
 from PySide2.QtWidgets import QMessageBox
 
+import activity_browser.extensions.mlca
 from .line_edit import SignalledLineEdit, SignalledComboEdit
 from ..icons import qicons
 from ...settings import project_settings
@@ -88,10 +91,18 @@ class ActivityDataGrid(QtWidgets.QWidget):
         # module combobox
         # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new module
         self.module_combo = QtWidgets.QComboBox()
+        self.populate_module_combo()
+        # self.module_combo.currentTextChanged.connect(lambda: self.FUNCTION(self.module_combo.currentText())) #TODO link to proper function
         self.module_combo.setToolTip("Use dropdown menu to start a new or add this unit process to a module")
 
         # module field
-        self.module_field = QtWidgets.QLabel('Placeholder')
+        self.module_field = QtWidgets.QWidget()
+        self.module_field_layout = QtWidgets.QHBoxLayout()
+        self.assemble_module_field() #TODO link modules here somehow
+        self.module_field.setLayout(self.module_field_layout)
+
+        #self.module_field = QtWidgets.QPushButton('Placeholder')
+        #self.module_field.clicked.connect(self.mod)
         self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
 
         # arrange widgets for display as a grid
@@ -119,6 +130,42 @@ class ActivityDataGrid(QtWidgets.QWidget):
         # do not allow user to edit fields if the ActivityDataGrid is read-only
         self.set_activity_fields_read_only()
         self.connect_signals()
+
+    def populate_module_combo(self, items=[]):
+        if len(items) == 0: #TODO replace with actual list of relevant modules
+            items = ['example']
+
+        items = ['', 'Add new Module'] + items
+        self.module_combo.addItems(items)
+
+
+
+    def mod(self):
+        #TODO only here for testing, remove when properly called
+        from ...extensions.mlca.modularsystem import ModularSystemDataManager
+        print('starting mlca')
+        wim = ModularSystemDataManager()
+        print(wim.modular_system_file)
+
+    def assemble_module_field(self, modules=[]):
+        if len(modules) == 0: #TODO replace with actual modules when ready
+            modules = ['module 1', 'module 2', 'module 3']
+
+        #self.module_buttons = []
+        for module_name in modules:
+            #TODO perhaps some code to extract module name or something
+            tag = QtWidgets.QPushButton(module_name, self) #TODO add coloring to modules
+
+            tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text())) #TODO add useful action
+            #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
+
+            self.module_field_layout.addWidget(tag)
+        self.module_field_layout.addStretch()
+
+    def module_field_tag_clicked(self, tag_name=None):
+        print('button clicked:', tag_name)
+
+
 
     def connect_signals(self):
         signals.edit_activity.connect(self.update_location_combo)
