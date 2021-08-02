@@ -17,6 +17,9 @@ from .mLCA_tables import (
     ModuleDatabaseTable,
     ModuleChainTable
 )
+
+from .modularsystem import ModularSystemDataManager
+
 from .mlca_icons import mlca_qicons
 
 from .mLCA_signals import mlca_signals
@@ -65,6 +68,58 @@ class mLCATab(QtWidgets.QWidget):
 
     def change_project(self):
         self.update_widgets()
+
+    def update_widgets(self):
+        #TODO revise description
+        """Update widgets when a new database has been selected or the project has been changed.
+        Hide empty widgets (e.g. Biosphere Flows table when an inventory database is selected)."""
+        no_modules = self.module_widget.outputs_table.rowCount() == 0
+
+        self.modular_database_widget.update_widget()
+
+        if not no_modules:
+            self.modular_database_widget.label_no_module_selected.hide()
+        else:
+            self.modular_database_widget.label_no_module_selected.show()
+            self.module_widget.hide()
+        self.resize_splitter()
+
+    def resize_splitter(self):
+        # TODO revise description
+        """Splitter sizes need to be reset (for some reason this is buggy if not done like this)"""
+        widgets = [self.modular_database_widget, self.module_widget]
+        sizes = [x.sizeHint().height() for x in widgets]
+        self.splitter.setSizes(sizes)
+
+class mLCATab(QtWidgets.QWidget):
+    def __init__(self, parent):
+        super(mLCATab, self).__init__(parent)
+        #self.manager = ModularSystemDataManager()
+
+        # main widgets
+        #self.modular_databases_widget = ModularDatabasesWidget()
+        self.modular_database_widget = ModularDatabaseWidget(self)
+        self.module_widget = ModuleWidget(self)
+
+        # Layout
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self.splitter.addWidget(self.modular_database_widget)
+        self.splitter.addWidget(self.module_widget)
+
+        self.overall_layout = QtWidgets.QVBoxLayout()
+        self.overall_layout.setAlignment(QtCore.Qt.AlignTop)
+        #self.overall_layout.addWidget(self.modular_databases_widget)
+        self.overall_layout.addWidget(self.splitter)
+        self.overall_layout.addStretch()
+        self.setLayout(self.overall_layout)
+
+        self.connect_signals()
+
+    def connect_signals(self):
+        pass
+
+    def change_project(self):
+        pass
 
     def update_widgets(self):
         #TODO revise description
@@ -218,6 +273,68 @@ class ModularDatabasesWidget(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Maximum)
         )
 
+
+class ModularDatabaseWidget(QtWidgets.QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.table = ModuleDatabaseTable()
+
+        # Labels
+        self.label_no_module_selected = QtWidgets.QLabel(
+            "Select a module (double-click on table)."
+        )
+
+        # Buttons
+        self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
+        self.new_module_button.setToolTip('Add a new module')
+
+        self.toolbar = QtWidgets.QLabel('Toolbar goes here')
+
+        self._construct_layout()
+        self._connect_signals()
+        self.hide()
+
+    def _connect_signals(self):
+        pass
+        mlca_signals.database_selected.connect(self.db_change)
+        #self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+
+    def db_change(self, selected):
+        if selected:
+            self.update_widget()
+        else:
+            self.reset_widget()
+
+    def reset_widget(self):
+        self.hide()
+        self.table.model.clear()
+
+    def _construct_layout(self):
+        header_widget = QtWidgets.QWidget()
+        header_layout = QtWidgets.QHBoxLayout()
+        header_layout.setAlignment(QtCore.Qt.AlignLeft)
+        header_layout.addWidget(header("Modules:"))
+        header_layout.addWidget(self.new_module_button)
+        header_layout.addWidget(self.label_no_module_selected)
+        header_widget.setLayout(header_layout)
+
+        # Overall Layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.addWidget(header_widget)
+        layout.addWidget(self.toolbar)
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+    def update_widget(self):
+        self.show()
+        no_modules = self.table.rowCount() == 0
+        if no_modules:
+            self.toolbar.hide()
+            self.table.hide()
+        else:
+            self.toolbar.show()
+            self.table.show()
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
