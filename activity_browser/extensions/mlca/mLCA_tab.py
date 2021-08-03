@@ -53,8 +53,8 @@ class mLCATab(QtWidgets.QWidget):
 
     def connect_signals(self):
         #TODO revise signals
-        mlca_signals.change_database.connect(self.change_database)
-        #signals.project_selected.connect(self.change_project)
+        #mlca_signals.change_database.connect(self.change_database)
+        signals.project_selected.connect(self.change_project)
         #signals.database_selected.connect(self.update_widgets)
         pass
 
@@ -78,10 +78,12 @@ class mLCATab(QtWidgets.QWidget):
         self.modular_database_widget.update_widget()
 
         if not no_modules:
-            self.modular_database_widget.label_no_module_selected.hide()
+            #self.modular_database_widget.label_no_module_selected.hide()
+            pass
         else:
-            self.modular_database_widget.label_no_module_selected.show()
-            self.module_widget.hide()
+            #self.modular_database_widget.label_no_module_selected.show()
+            #self.module_widget.hide()
+            pass
         self.resize_splitter()
 
     def resize_splitter(self):
@@ -94,7 +96,7 @@ class mLCATab(QtWidgets.QWidget):
 class mLCATab(QtWidgets.QWidget):
     def __init__(self, parent):
         super(mLCATab, self).__init__(parent)
-        #self.manager = ModularSystemDataManager()
+        self.manager = ModularSystemDataManager()
 
         # main widgets
         #self.modular_databases_widget = ModularDatabasesWidget()
@@ -286,18 +288,17 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
         # Buttons
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
-        self.new_module_button.setToolTip('Add a new module')
+        self.new_module_button.setToolTip('Create a new module')
 
         self.toolbar = QtWidgets.QLabel('Toolbar goes here')
 
         self._construct_layout()
         self._connect_signals()
-        self.hide()
 
     def _connect_signals(self):
         pass
-        mlca_signals.database_selected.connect(self.db_change)
-        #self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+        #mlca_signals.database_selected.connect(self.db_change)
+        self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
 
     def db_change(self, selected):
         if selected:
@@ -306,8 +307,9 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
             self.reset_widget()
 
     def reset_widget(self):
-        self.hide()
-        self.table.model.clear()
+        #self.hide()
+        #self.table.model.clear()
+        pass
 
     def _construct_layout(self):
         header_widget = QtWidgets.QWidget()
@@ -327,14 +329,17 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def update_widget(self):
-        self.show()
-        no_modules = self.table.rowCount() == 0
-        if no_modules:
-            self.toolbar.hide()
-            self.table.hide()
-        else:
-            self.toolbar.show()
-            self.table.show()
+        pass
+        self.table.model.sync()
+
+        #self.show()
+        #no_modules = self.table.rowCount() == 0
+        #if no_modules:
+        #    self.toolbar.hide()
+        #    self.table.hide()
+        #else:
+        #    self.toolbar.show()
+        #    self.table.show()
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -354,7 +359,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
         self._construct_layout()
         self._connect_signals()
-        self.hide()
+        #self.hide()
 
     def _connect_signals(self):
         pass
@@ -368,8 +373,9 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
             self.reset_widget()
 
     def reset_widget(self):
-        self.hide()
-        self.table.model.clear()
+        pass
+        #self.hide()
+        #self.table.model.clear()
 
     def _construct_layout(self):
         header_widget = QtWidgets.QWidget()
@@ -390,13 +396,13 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
     def update_widget(self):
         self.show()
-        no_modules = self.table.rowCount() == 0
-        if no_modules:
-            self.toolbar.hide()
-            self.table.hide()
-        else:
-            self.toolbar.show()
-            self.table.show()
+        #no_modules = self.table.rowCount() == 0
+        #if no_modules:
+        #    self.toolbar.hide()
+        #    self.table.hide()
+        #else:
+        #    self.toolbar.show()
+        #    self.table.show()
 
 class ModuleWidget(QtWidgets.QWidget):
     def __init__(self, parent):

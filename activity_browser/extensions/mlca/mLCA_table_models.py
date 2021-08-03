@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 from .mLCA_signals import mlca_signals
-from .modularsystem import ModularSystem
+from .modularsystem import ModularSystem, ModularSystemDataManager
 
 
 
@@ -152,6 +152,40 @@ class ModuleDatabaseModel(PandasModel):
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.updated.emit()"""
 
+class ModuleDatabaseModel(PandasModel):
+    """Contain data for all modules in the modular system database"""
+    HEADERS = ["Name", "out/chain/cuts", "Outputs", "Cuts", "Chain"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.manager = ModularSystemDataManager()
+
+        self.connect_signals()
+
+    def connect_signals(self):
+        signals.project_selected.connect(self.sync)
+
+    def get_module_name(self, proxy: QModelIndex) -> str:
+        idx = self.proxy_to_source(proxy)
+        return self._dataframe.iat[idx.row(), 0]
+
+    def sync(self):
+        data = []
+        for mp_data in self.manager.open_raw():
+
+            numbers = [len(mp_data['outputs']), len(set(mp_data['chain'])), len(set(mp_data['cuts']))]
+
+            print('+++\n', {'chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']])})
+            data.append({
+                'Name': mp_data['name'],
+                'out/chain/cuts': ", ".join(map(str, numbers)),
+                'Outputs': ", ".join([o[1] for o in mp_data['outputs']]),
+                'Chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']]),
+                'Cuts': ", ".join(set([c[2] for c in mp_data['cuts']])),
+            })
+        self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
+        self.updated.emit()
 
 class ModuleChainModel(PandasModel):
     HEADERS = ["product", "name", "location", "amount", "unit", "database"]

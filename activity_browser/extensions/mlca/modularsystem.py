@@ -118,7 +118,7 @@ class ModularSystem(object):
 
     # DATABASE METHODS (FILE I/O, LMPS MODIFICATION)
 
-    def load_from_file(self, filepath, append=False):
+    def load_from_file(self, filepath, append=False, raw=False):
         """
         Loads a meta-process database, makes a MetaProcess object from each meta-process and
         adds them to the linked meta-process system.
@@ -131,6 +131,8 @@ class ModularSystem(object):
         try:
             with open(filepath, 'rb') as infile:
                 raw_data = pickle.load(infile)
+                if raw:
+                    return raw_data
         except:
             raise IOError(u'Could not load file.')
         mp_list = [Module(**mp) for mp in raw_data]
@@ -433,33 +435,55 @@ class ModularSystemDataManager(object):
     """Manages the data of the modular system.
     Data manager takes care of saving data to the right place and opening the right modular systems"""
     def __init__(self):
-        pass
         self.project = bw.projects.current
-        self.old_project = bw.projects.current
         self.project_folder = bw.projects.dir
-        self.old_project_folder = bw.projects.dir
+
+        self.modular_system_path
 
         self.connect_signals()
 
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
-        pass
 
     def project_change(self):
-        """Save and close modular system that was connected to other project and open current project's modular system"""
+        """Save modular system that was connected to previous project and get current project's modular system location"""
+        self.save_modular_system()
+        # update the project/folder now that the old location is saved to
+        self.project = bw.projects.current
+        self.project_folder = bw.projects.dir
+
+    def save_modular_system(self):
+        """Properly save modular system"""
+        #ms_file = self.modular_system_path(project=self.project_folder)
+        #modular_system = ModularSystem.load_from_file(filepath=ms_file)
+        #ModularSystem.save_to_file(modular_system, filepath=ms_file)
         pass
 
-    def open_modular_system(self):
-        """If there is no modular system in project, make a new one, otherwise open the existing one"""
-        pass
+    def open_modular_system(self, path=None):
+        """Load modular system from file and return the modular system object."""
+        if not path:
+            path = self.modular_system_path
+        modular_system = ModularSystem()
+        modular_system.load_from_file(filepath=path)
+        return modular_system
 
-    def close_modular_system(self, save=True):
-        """Properly close (and save) modular system"""
-        pass
+    def open_raw(self, path=None):
+        """Load raw modular system data and return the raw data."""
+        if not path:
+            path = self.modular_system_path
+        #modular_system = ModularSystem()
+        return ModularSystem().load_from_file(filepath=path, raw=True)
+
+    def modular_system_from_raw(self, raw_data=[]):
+        """Generate a modular system from raw data.
+        open raw and this function together do the same as the open_modular_system function."""
+        mp_list = [Module(**mp) for mp in raw_data]
+        return ModularSystem(mp_list=mp_list)
 
     @property
-    def modular_system_file(self):
+    def modular_system_path(self):
         """Return the modular system file, generate one if it does not exist yet"""
+        # ms = modular system
         ms_dir = os.path.join(self.project_folder, 'modular_system')
         ms_file = os.path.join(ms_dir, 'modular_system.mlca')
 
@@ -469,6 +493,6 @@ class ModularSystemDataManager(object):
 
         # check if file exists, if not, generate it
         if not os.path.isfile(ms_file):
-            ModularSystem.save_to_file(ModularSystem(), filepath=ms_file)
+            ModularSystem().save_to_file(filepath=ms_file)
 
         return ms_file
