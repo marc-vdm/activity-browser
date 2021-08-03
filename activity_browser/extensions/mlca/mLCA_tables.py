@@ -1,5 +1,6 @@
 from ...ui.tables.views import ABDataFrameView
 from .mLCA_table_models import ModuleDatabaseModel, ModuleChainModel
+from .mLCA_signals import mlca_signals
 
 from PySide2 import QtWidgets
 from activity_browser.signals import signals
@@ -26,7 +27,7 @@ class ModuleDatabaseTable(ABDataFrameView):
 
 
         self.doubleClicked.connect(
-            lambda p: signals.module_selected.emit(self.model.get_module_name(p))
+            lambda p: mlca_signals.module_selected.emit(self.model.get_module_name(p))
         ) #TODO link this also to graph view opening??
 
         self.model.updated.connect(self.update_proxy_model)
@@ -61,11 +62,13 @@ class ModuleChainTable(ABDataFrameView):
 
     def _connect_signals(self):
         #TODO link these signals
+        pass
+        #mlca_signals.module_selected.connect(self.update_table)
 
 
-        self.doubleClicked.connect(
-            lambda p: signals.module_selected.emit(self.model.get_module_name(p))
-        ) #TODO link this also to graph view opening??
+        #self.doubleClicked.connect(
+        #    lambda p: signals.module_selected.emit(self.model.get_module_name(p))
+        #) #TODO link this also to graph view opening??
 
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
@@ -79,3 +82,6 @@ class ModuleChainTable(ABDataFrameView):
         """ Return the database name of the user-selected index.
         """
         return self.model.get_module_name(self.currentIndex())
+
+    def update_table(self):
+        pass

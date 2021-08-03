@@ -11,6 +11,6 @@ class MlcaSignals(QObject):
 
     # modules
     new_module = Signal()
-    module_selected = Signal()
+    module_selected = Signal(str)
 
 mlca_signals = MlcaSignals()

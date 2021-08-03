@@ -283,7 +283,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
         # Labels
         self.label_no_module_selected = QtWidgets.QLabel(
-            "Select a module (double-click on table)."
+            "Create a new module or select a module (double-click on table)."
         )
 
         # Buttons
@@ -409,8 +409,8 @@ class ModuleWidget(QtWidgets.QWidget):
         super(ModuleWidget, self).__init__(parent)
 
         self.outputs_table = ActivitiesBiosphereTable(self) #TODO replace with module outputs table
-        #self.chain_table = ModuleChainTable(self)  # TODO replace with module chain table
-        self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
+        self.chain_table = ModuleChainTable(self)  # TODO replace with module chain table
+        #self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
         self.cuts_table = ActivitiesBiosphereTable(self)  # TODO replace with module cuts table/tree
 
         # Header widget
@@ -425,7 +425,8 @@ class ModuleWidget(QtWidgets.QWidget):
         self.name_layout = QtWidgets.QHBoxLayout()
         self.name_layout.setAlignment(QtCore.Qt.AlignLeft)
         self.name_layout.addWidget(QtWidgets.QLabel('Name:'))
-        self.name_layout.addWidget(QtWidgets.QLineEdit())
+        self.module_name_field = QtWidgets.QLineEdit()
+        self.name_layout.addWidget(self.module_name_field)
         self.name_widget.setLayout(self.name_layout)
 
         # output widget
@@ -436,13 +437,13 @@ class ModuleWidget(QtWidgets.QWidget):
 
         self.construct_layout()
         self.connect_signals()
-        self.hide()
+        #self.hide()
 
     def connect_signals(self):
         pass
-        mlca_signals.database_selected.connect(self.reset_widget)
+        #mlca_signals.database_selected.connect(self.reset_widget)
 
-        mlca_signals.module_selected.connect(self.update_table)
+        mlca_signals.module_selected.connect(self.update_widget)
 
     def construct_layout(self):
         # Overall Layout
@@ -478,8 +479,9 @@ class ModuleWidget(QtWidgets.QWidget):
         self.chain_table.model.clear()
         self.cuts_table.model.clear()
 
-    def update_table(self, db_name=''):
-        if self.outputs_table.database_name: #TODO how to do this with three tables?
-            self.show()
+    def update_widget(self, db_name=''):
+        self.module_name_field.setText(db_name)
+        #if self.outputs_table.database_name: #TODO how to do this with three tables?
+        #    self.show()
         #TODO fix label_module missing
         #self.label_module.setText("[{}]".format(db_name))

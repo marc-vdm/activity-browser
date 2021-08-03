@@ -446,8 +446,7 @@ class ModularSystemDataManager(object):
         signals.project_selected.connect(self.project_change)
 
     def project_change(self):
-        """Save modular system that was connected to previous project and get current project's modular system location"""
-        self.save_modular_system()
+        """Get project's new modular system location"""
         # update the project/folder now that the old location is saved to
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
@@ -479,6 +478,10 @@ class ModularSystemDataManager(object):
         open raw and this function together do the same as the open_modular_system function."""
         mp_list = [Module(**mp) for mp in raw_data]
         return ModularSystem(mp_list=mp_list)
+
+    def add_module(self):
+        pass
+
 
     @property
     def modular_system_path(self):

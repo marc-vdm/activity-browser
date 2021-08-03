@@ -5,11 +5,11 @@ from activity_browser.signals import signals
 from PySide2.QtCore import QModelIndex, Slot
 import pandas as pd
 from pathlib import Path
-
-
+from activity_browser.bwutils import AB_metadata
 
 from .mLCA_signals import mlca_signals
 from .modularsystem import ModularSystem, ModularSystemDataManager
+from .module import Module
 
 
 
@@ -27,7 +27,7 @@ class ModuleDatabaseModel(PandasModel):
         self.connect_signals()
 
     def connect_signals(self):
-        mlca_signals.module_selected.connect(self.sync)
+        #mlca_signals.module_selected.connect(self.sync)
         #signals.module_changed.connect(self.sync)
 
         mlca_signals.change_database.connect(self.sync)
@@ -172,33 +172,32 @@ class ModuleDatabaseModel(PandasModel):
 
     def sync(self):
         data = []
-        for mp_data in self.manager.open_raw():
-
-            numbers = [len(mp_data['outputs']), len(set(mp_data['chain'])), len(set(mp_data['cuts']))]
-
-            print('+++\n', {'chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']])})
+        for raw_module in self.manager.open_raw():
+            numbers = [len(raw_module['outputs']), len(set(raw_module['chain'])), len(set(raw_module['cuts']))]
+            #print('+++\n', {'chain': "//".join([bw.get_activity(c)['name'] for c in raw_module['chain']])})
             data.append({
-                'Name': mp_data['name'],
+                'Name': raw_module['name'],
                 'out/chain/cuts': ", ".join(map(str, numbers)),
-                'Outputs': ", ".join([o[1] for o in mp_data['outputs']]),
-                'Chain': "//".join([bw.get_activity(c)['name'] for c in mp_data['chain']]),
-                'Cuts': ", ".join(set([c[2] for c in mp_data['cuts']])),
+                'Outputs': ", ".join([o[1] for o in raw_module['outputs']]),
+                'Chain': "//".join([bw.get_activity(c)['name'] for c in raw_module['chain']]),
+                'Cuts': ", ".join(set([c[2] for c in raw_module['cuts']])),
             })
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.updated.emit()
 
 class ModuleChainModel(PandasModel):
-    HEADERS = ["product", "name", "location", "amount", "unit", "database"]
+    HEADERS = ["product", "name", "location", "unit", "database"]
 
     def __init__(self, parent=None, module=None):
         super().__init__(parent=parent)
 
         self.module = module
+        self.manager = ModularSystemDataManager()
 
         self.connect_signals()
 
     def connect_signals(self):
-        pass
+        mlca_signals.module_selected.connect(self.sync)
 
     def get_SOMETHING_name(self, proxy: QModelIndex) -> str:
         #TODO replace SOMETHING name
@@ -208,9 +207,29 @@ class ModuleChainModel(PandasModel):
     def open_mlca_db(self, path) -> None:
         self.mlca_db.load_from_file(filepath=path)
 
-    def convert_pandas(self):
-        data = []
+    def sync(self, module_name: str) -> None:
 
-    @Slot(tuple, name='mlcaDbChanged')
-    def sync(self, db_data: tuple) -> None:
-        pass
+        for raw_module in self.manager.open_raw():
+            if raw_module['name'] == module_name:
+                chain = raw_module['chain']
+                break
+
+        databases = list(set(c[0] for c in chain))
+
+        chain_df = pd.DataFrame()
+        for database in databases:
+            db = AB_metadata.get_database_metadata(database)
+            db = db[db['key'].isin(chain)]
+            chain_df = pd.concat([chain_df, db])
+
+        chain_df = chain_df[["reference product", "name", "location", "unit", "database"]]
+        chain_df.rename(columns={"reference product": "product"}, inplace=True)
+        self._dataframe = chain_df
+
+        self.updated.emit()
+
+class ModuleCutsModel(PandasModel):
+    HEADERS = ["product", "name", "location", "amount", "unit", "database"]
+
+    def __init__(self, parent=None, module=None):
+        super().__init__(parent=parent)
