@@ -14,19 +14,19 @@ class Module(object):
     * It produces one or several output products
     * It has at least one process from an inventory database
     * It has one or several scaling activities that are linked to the output of the system. They are calculated automatically based on the product output (exception: if output_based_scaling=False, see below).
-    * Inputs may be cut-off. Cut-offs are remembered and can be used in a linked meta-process to recombine meta-processes to form supply chains (or several, alternative supply chains).
+    * Inputs may be cut-off. Cut-offs are remembered and can be used in a linked module to recombine modules to form supply chains (or several, alternative supply chains).
 
     Args:
-        * *name* (``str``): Name of the meta-process
-        * *outputs* (``[(key, str, optional float)]``): A list of products produced by the meta-process. Format is ``(key into inventory database, product name, optional amount of product produced)``.
+        * *name* (``str``): Name of the module
+        * *outputs* (``[(key, str, optional float)]``): A list of products produced by the module. Format is ``(key into inventory database, product name, optional amount of product produced)``.
         * *chain* (``[key]``): A list of inventory processes in the supply chain (not necessarily in order).
         * *cuts* (``[(parent_key, child_key, str, float)]``): A set of linkages in the supply chain that should be cut. These will appear as **negative** products (i.e. inputs) in the process-product table. The float amount is determined automatically. Format is (input key, output key, product name, amount).
         * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory processes.
 
     """
-    # TODO: introduce UUID for meta-processes?
+    # TODO: introduce UUID for modules?
 
-    # INTERNAL METHODS FOR CONSTRUCTING META-PROCESSES
+    # INTERNAL METHODS FOR CONSTRUCTING MODULES
 
     def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, **kwargs):
         self.key = None  # created when MP saved to a DB
@@ -201,7 +201,7 @@ class Module(object):
         return mapping, demand, matrix, np.linalg.solve(matrix, demand).tolist()
 
     def get_edge_lists(self):
-        """Get lists of external and internal edges with original flow values or scaled to the meta-process."""
+        """Get lists of external and internal edges with original flow values or scaled to the module."""
         self.external_edges = \
             [x for x in self.edges if (x[0] not in self.chain and x[:2] not in set([y[:2] for y in self.cuts]))]
         self.internal_edges = \
@@ -226,11 +226,11 @@ class Module(object):
                     except IndexError:
                         print("Problem with cut data: " + str(c))
 
-    # METHODS THAT RETURN META-PROCESS DATA
+    # METHODS THAT RETURN MODULE DATA
 
     @property
     def mp_data(self):
-        """Returns a dictionary of meta-process data as specified in the data format."""
+        """Returns a dictionary of module data as specified in the data format."""
         mp_data_dict = {
             'name': self.name,
             'outputs': self.outputs,
@@ -295,7 +295,7 @@ class Module(object):
             * *unit* (str, optional): Unit of the simplified process
             * *location* (str, optional): Location of the simplified process
             * *categories* (list, optional): Category/ies of the scaling activity
-            * *save_aggregated_inventory* (bool, optional): Saves in output minus input style by default (True), otherwise aggregated inventory of all inventories linked within the meta-process
+            * *save_aggregated_inventory* (bool, optional): Saves in output minus input style by default (True), otherwise aggregated inventory of all inventories linked within the module
 
         """
         db = bw.Database(db_name)

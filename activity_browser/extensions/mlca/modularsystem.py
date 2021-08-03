@@ -12,21 +12,21 @@ from ...signals import signals
 
 class ModularSystem(object):
     """
-    A linked meta-process system holds several interlinked meta-processes. It has methods for:
+    A linked modular system holds several interlinked modules. It has methods for:
 
-    * loading / saving linked meta-process systems
+    * loading / saving linked modular systems
     * returning information, e.g. product and process names, the product-process matrix
     * determining all alternatives to produce a given functional unit
-    * calculating LCA results for individual meta-processes
-    * calculating LCA results for a demand from the linked meta-process system (possibly for all alternatives)
+    * calculating LCA results for individual modules
+    * calculating LCA results for a demand from the linked modular system (possibly for all alternatives)
 
-    Meta-processes *cannot* contain:
+    Modules *cannot* contain:
 (    * 2 processes with the same name)
     * identical names for products and processes (recommendation is to capitalize process names)
 
     Args:
 
-    * *mp_list* (``[MetaProcess]``): A list of meta-processes
+    * *mp_list* (``[module]``): A list of modules
     """
 
     def __init__(self, mp_list=None):
@@ -45,24 +45,24 @@ class ModularSystem(object):
 
     def update(self, mp_list):
         """
-        Updates the linked meta-process system every time processes
+        Updates the linked modular system every time processes
         are added, modified, or deleted.
         Errors are thrown in case of:
 
         * identical names for products and processes
-        * identical names of different meta-processes
-        * if the input is not of type MetaProcess()
+        * identical names of different modules
+        * if the input is not of type Module()
         """
         product_names, process_names = set(), set()
         for mp in mp_list:
             if not isinstance(mp, Module):
-                raise ValueError(u"Input must be of MetaProcesses type.")
+                raise ValueError(u"Input must be of Modules type.")
             try:
                 assert mp.name not in process_names  # check if process names are unique
                 process_names.add(mp.name)
                 product_names.update(self.get_product_names([mp]))
             except AssertionError:
-                raise ValueError(u'Meta-Process names must be unique.')
+                raise ValueError(u'Module names must be unique.')
         for product in product_names:
             if product in process_names:
                 raise ValueError(u'Product and Process names cannot be identical.')
@@ -87,7 +87,7 @@ class ModularSystem(object):
         else:
             self.has_loops = False
 
-        print('\nMeta-process system with', len(self.products), 'products and', len(self.processes), 'processes.')
+        print('\nmodular system with', len(self.products), 'products and', len(self.processes), 'processes.')
         print('Loops:', self.has_loops, ', Multi-output processes:', self.has_multi_output_processes)
 
     def update_name_map(self):
@@ -120,13 +120,13 @@ class ModularSystem(object):
 
     def load_from_file(self, filepath, append=False, raw=False):
         """
-        Loads a meta-process database, makes a MetaProcess object from each meta-process and
-        adds them to the linked meta-process system.
+        Loads a modular database, makes a Module object from each module and
+        adds them to the linked modular system.
 
         Args:
 
         * filepath: file path
-        * append: adds loaded meta-processes to the existing database if True
+        * append: adds loaded modules to the existing database if True
         """
         try:
             with open(filepath, 'rb') as infile:
@@ -142,15 +142,15 @@ class ModularSystem(object):
             self.update(mp_list)
 
     def save_to_file(self, filepath):
-        """Saves data for each meta-process in the meta-process data format using pickle and updates the linked meta process system."""
+        """Saves data for each module in the modular data format using pickle and updates the linked modular system."""
         with open(filepath, 'wb') as outfile:
             pickle.dump(self.raw_data, outfile)
 
     def add_mp(self, mp_list, rename=False):
         """
-        Adds meta-processes to the linked meta-process system.
+        Adds modules to the linked modular system.
 
-        *mp_list* can contain meta-process objects or the original data format used to initialize meta-processes.
+        *mp_list* can contain module objects or the original data format used to initialize modules.
         """
         new_mp_list = []
         for mp in mp_list:
@@ -165,9 +165,9 @@ class ModularSystem(object):
 
     def remove_mp(self, mp_list):
         """
-        Remove meta-processes from the linked meta-process system.
+        Remove modules from the linked modular system.
 
-        *mp_list* can be a list of meta-process objects or meta-process names.
+        *mp_list* can be a list of module objects or module names.
         """
         for mp in mp_list:
             if not isinstance(mp, Module):
@@ -179,43 +179,43 @@ class ModularSystem(object):
 
     def get_processes(self, mp_list=None):
         """
-        Returns a list of meta-processes.
+        Returns a list of modules.
 
-        *mp_list* can be a list of meta-process objects or meta-process names.
+        *mp_list* can be a list of module objects or module names.
         """
-        # if empty list return all meta-processes
+        # if empty list return all modules
         if not mp_list:
             return self.mp_list
         else:
-            # if name list find corresponding meta-processes
+            # if name list find corresponding modules
             if not isinstance(mp_list[0], Module):
                 return [self.map_name_mp.get(name, None) for name in mp_list if name in self.processes]
             else:
                 return mp_list
 
     def get_process_names(self, mp_list=None):
-        """Returns a the names of a list of meta-processes."""
+        """Returns a the names of a list of modules."""
         return sorted([mp.name for mp in self.get_processes(mp_list)])
 
     def get_product_names(self, mp_list=None):
-        """Returns the output and input product names of a list of meta-processes.
+        """Returns the output and input product names of a list of modules.
 
-        *mp_list* can be a list of meta-process objects or meta-process names.
+        *mp_list* can be a list of module objects or module names.
         """
         return sorted(set(itertools.chain(*[[x[0] for x in y.pp
             ] for y in self.get_processes(mp_list)])))
 
     def get_output_names(self, mp_list=None):
-        """ Returns output product names for a list of meta-processes."""
+        """ Returns output product names for a list of modules."""
         return sorted(list(set([name for mp in self.get_processes(mp_list) for name in mp.output_names])))
 
     def get_cut_names(self, mp_list=None):
-        """ Returns cut/input product names for a list of meta-processes."""
+        """ Returns cut/input product names for a list of modules."""
         return sorted(list(set([name for mp in self.get_processes(mp_list) for name in mp.cut_names])))
 
     def product_process_dict(self, mp_list=None, process_names=None, product_names=None):
         """
-        Returns a dictionary that maps meta-processes to produced products (key: product, value: meta-process).
+        Returns a dictionary that maps modules to produced products (key: product, value: module).
         Optional arguments ``mp_list``, ``process_names``, ``product_names`` can used as filters.
         """
         if not process_names:
@@ -233,9 +233,9 @@ class ModularSystem(object):
 
     def edges(self, mp_list=None):
         """
-        Returns an edge list for all edges within the linked meta-process system.
+        Returns an edge list for all edges within the linked modular system.
 
-        *mp_list* can be a list of meta-process objects or meta-process names.
+        *mp_list* can be a list of module objects or module names.
         """
         edges = []
         for mp in self.get_processes(mp_list):
@@ -332,7 +332,7 @@ class ModularSystem(object):
 
         Args:
 
-        * *mp_list*: meta-process objects or names
+        * *mp_list*: module objects or names
         * *demand* (dict): keys: product names, values: amount
         """
         # matrix
@@ -360,14 +360,14 @@ class ModularSystem(object):
             print("Product-Process Matrix must be square! Currently", matrix.shape[0], 'products and', matrix.shape[1], 'processes.')
 
     def lca_processes(self, method, process_names=None, factorize=False):
-        """Returns a dictionary where *keys* = meta-process name, *value* = LCA score
+        """Returns a dictionary where *keys* = module name, *value* = LCA score
         """
         return dict([(mp.name, mp.lca(method, factorize=factorize))
                      for mp in self.get_processes(process_names)])
 
     def lca_linked_processes(self, method, process_names, demand):
         """
-        Performs LCA for a given demand from a linked meta-process system.
+        Performs LCA for a given demand from a linked modular system.
         Works only for square matrices (see scaling_vector_foreground_demand).
 
         Returns a dictionary with the following keys:
@@ -383,7 +383,7 @@ class ModularSystem(object):
         Args:
 
         * *method*: LCIA method
-        * *process_names*: selection of processes from the linked meta-process system (that yields a square matrix)
+        * *process_names*: selection of processes from the linked modular system (that yields a square matrix)
         * *demand* (dict): keys: product names, values: amount
         """
         scaling_dict = self.scaling_vector_foreground_demand(process_names, demand)
@@ -413,7 +413,7 @@ class ModularSystem(object):
 
     def lca_alternatives(self, method, demand):
         """
-        Calculation of LCA results for all alternatives in a linked meta-process system that yield a certain demand.
+        Calculation of LCA results for all alternatives in a linked modular system that yield a certain demand.
         Results are stored in a list of dictionaries as described in 'lca_linked_processes'.
 
         Args:
