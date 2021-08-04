@@ -1,4 +1,7 @@
-from ...ui.tables.models.base import PandasModel, BaseTreeModel
+from ...ui.tables.models.base import (
+    PandasModel,
+    BaseTreeModel,
+    TreeItem)
 import brightway2 as bw
 from activity_browser.signals import signals
 
@@ -125,4 +128,81 @@ class ModuleChainModel(PandasModel):
         chain_df.rename(columns={"reference product": "product"}, inplace=True)
         self._dataframe = chain_df
         self.key_col = self._dataframe.columns.get_loc("key")
+        self.updated.emit()
+
+class ModuleCutsItem(TreeItem):
+    """ Item in ModuleCutsModel."""
+
+    #@classmethod
+    #def build_header(cls, header: str, parent: TreeItem) -> 'ModuleCutsItem':
+    #    item = cls([header, "", "", ""], parent)
+    #    parent.appendChild(item)
+    #    return item
+
+    @classmethod
+    def build_item(cls, cut, parent: TreeItem) -> 'ModuleCutsItem':
+        item = cls(list(cut), parent)
+        parent.appendChild(item)
+        return item
+
+class ModuleCutsModel(BaseTreeModel):
+    """Contain data for chain in module."""
+    HEADERS = ["product", "name", "location", "amount", "unit", "database", "key"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.root = ModuleCutsItem.build_root(self.HEADERS)
+        self.manager = ModularSystemDataManager()
+        self._dataframe = None
+        self.key_col = 0
+
+        self.setup_model_data()
+        self.connect_signals()
+
+    def connect_signals(self):
+        mlca_signals.module_selected.connect(self.sync)
+
+    def setup_model_data(self) -> None:
+        """Construct a dataframe of module cuts and a complete nested
+        dict of the dataframe.
+
+        Trigger this at the start and when a method is added/deleted.
+        """
+        pass
+
+    def sync(self, module_name: str) -> None:
+        self.beginResetModel()
+        self.root.clear()
+        self.endResetModel()
+
+        for raw_module in self.manager.open_raw():
+            if raw_module['name'] == module_name:
+                outputs = raw_module['cuts']
+                break
+
+        """
+        databases = list(set(o[0][0] for o in outputs))
+        output_keys = {k: [v1, v2] for k, v1, v2 in outputs}
+
+        data = []
+        for database in databases:
+            db = AB_metadata.get_database_metadata(database)
+            for out_key, out_vals in output_keys.items():
+                row = db[db['key'] == out_key]
+                data.append({
+                    "product": row['reference product'].values[0],
+                    "name": row['name'].values[0],
+                    "location": row['location'].values[0],
+                    "amount": 0,
+                    "unit": row['unit'].values[0],
+                    "database": out_key[0],
+                    "key": out_key
+                })
+
+        self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
+        self.key_col = self._dataframe.columns.get_loc("key")
+        """
+
+        self.setup_model_data()
         self.updated.emit()
