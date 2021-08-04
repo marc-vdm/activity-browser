@@ -1,5 +1,9 @@
-from ...ui.tables.views import ABDataFrameView
-from .mLCA_table_models import ModuleDatabaseModel, ModuleChainModel, ModuleOutputsModel
+from ...ui.tables.views import ABDataFrameView, ABDictTreeView
+from .mLCA_table_models import (
+    ModuleDatabaseModel,
+    ModuleChainModel,
+    ModuleOutputsModel,
+    ModuleCutsModel)
 from .mLCA_signals import mlca_signals
 
 from PySide2 import QtWidgets
@@ -84,6 +88,12 @@ class ModuleOutputsTable(ABDataFrameView):
         """
         return self.model.get_module_name(self.currentIndex())
 
+    def custom_view_sizing(self) -> None:
+        self.setColumnHidden(self.model.key_col, True)
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
+        ))
+
     def update_table(self):
         pass
 
@@ -128,5 +138,12 @@ class ModuleChainTable(ABDataFrameView):
         """
         return self.model.get_module_name(self.currentIndex())
 
+    def custom_view_sizing(self) -> None:
+        self.setColumnHidden(self.model.key_col, True)
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
+        ))
+
     def update_table(self):
         pass
+
