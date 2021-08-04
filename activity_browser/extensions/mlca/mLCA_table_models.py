@@ -68,17 +68,23 @@ class ModuleOutputsModel(PandasModel):
                 outputs = raw_module['outputs']
                 break
 
-        databases = list(set(o[0][0] for o in outputs))
-        output_keys = {k: [v1, v2] for k, v1, v2 in outputs}
+        databases = set()
+        output_keys = []
+        for output in outputs:
+            for key in output[0:-2]:
+                databases.add(key[0])
+                output_keys.append((key, output[-2], output[-1]))
+
+        databases = list(databases)
 
         data = []
         for database in databases:
             db = AB_metadata.get_database_metadata(database)
-            for out_key, out_vals in output_keys.items():
+            for out_key, custom_name, quantity in output_keys:
                 row = db[db['key'] == out_key]
                 data.append({
-                    "custom name": out_vals[0],
-                    "quantity": out_vals[1],
+                    "custom name": custom_name,
+                    "quantity": quantity,
                     "unit": row['unit'].values[0],
                     "product": row['reference product'].values[0],
                     "name": row['name'].values[0],
@@ -147,7 +153,7 @@ class ModuleCutsItem(TreeItem):
 
 class ModuleCutsModel(BaseTreeModel):
     """Contain data for chain in module."""
-    HEADERS = ["product", "name", "location", "amount", "unit", "database", "key"]
+    HEADERS = ["product", "name", "location", "amount", "unit", "database", "key", "cut"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -156,6 +162,7 @@ class ModuleCutsModel(BaseTreeModel):
         self.manager = ModularSystemDataManager()
         self._dataframe = None
         self.key_col = 0
+        self.cut_col = 0
 
         self.setup_model_data()
         self.connect_signals()
@@ -164,8 +171,7 @@ class ModuleCutsModel(BaseTreeModel):
         mlca_signals.module_selected.connect(self.sync)
 
     def setup_model_data(self) -> None:
-        """Construct a dataframe of module cuts and a complete nested
-        dict of the dataframe.
+        """Construct a nested dict of the self._dataframe.
 
         Trigger this at the start and when a method is added/deleted.
         """
@@ -178,31 +184,39 @@ class ModuleCutsModel(BaseTreeModel):
 
         for raw_module in self.manager.open_raw():
             if raw_module['name'] == module_name:
-                outputs = raw_module['cuts']
+                cuts = raw_module['cuts']
                 break
 
-        """
-        databases = list(set(o[0][0] for o in outputs))
-        output_keys = {k: [v1, v2] for k, v1, v2 in outputs}
+        databases = set()
+        output_keys = []
+        c = 0
+        for cut in cuts:
+            c += 1
+            for key in cut[0:-2]:
+                databases.add(key[0])
+                output_keys.append((key, str(cut[-2] + '::' + str(c)), cut[-1]))
+
+        databases = list(databases)
 
         data = []
         for database in databases:
             db = AB_metadata.get_database_metadata(database)
-            for out_key, out_vals in output_keys.items():
-                row = db[db['key'] == out_key]
+            for cut_key, cut, amount in output_keys:
+                row = db[db['key'] == cut_key]
                 data.append({
                     "product": row['reference product'].values[0],
                     "name": row['name'].values[0],
                     "location": row['location'].values[0],
-                    "amount": 0,
+                    "amount": amount,
                     "unit": row['unit'].values[0],
-                    "database": out_key[0],
-                    "key": out_key
+                    "database": cut_key[0],
+                    "key": cut_key,
+                    "cut": cut
                 })
 
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.key_col = self._dataframe.columns.get_loc("key")
-        """
+        self.cut_col = self._dataframe.columns.get_loc("cut")
 
         self.setup_model_data()
         self.updated.emit()
