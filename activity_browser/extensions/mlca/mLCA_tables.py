@@ -64,10 +64,12 @@ class ModuleOutputsTable(ABDataFrameView):
         pass
         #mlca_signals.module_selected.connect(self.update_table)
 
-
-        #self.doubleClicked.connect(
-        #    lambda p: signals.module_selected.emit(self.model.get_module_name(p))
-        #) #TODO link this also to graph view opening??
+        self.doubleClicked.connect(
+            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
+        )  # TODO link this also to graph view opening??
+        self.doubleClicked.connect(
+            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
+        )
 
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
@@ -106,10 +108,12 @@ class ModuleChainTable(ABDataFrameView):
         pass
         #mlca_signals.module_selected.connect(self.update_table)
 
-
-        #self.doubleClicked.connect(
-        #    lambda p: signals.module_selected.emit(self.model.get_module_name(p))
-        #) #TODO link this also to graph view opening??
+        self.doubleClicked.connect(
+            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
+        )  # TODO link this also to graph view opening??
+        self.doubleClicked.connect(
+            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
+        )
 
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
