@@ -1,4 +1,4 @@
-from ...ui.tables.models import PandasModel
+from ...ui.tables.models.base import PandasModel, BaseTreeModel
 import brightway2 as bw
 from activity_browser.signals import signals
 
@@ -42,12 +42,13 @@ class ModuleDatabaseModel(PandasModel):
         self.updated.emit()
 
 class ModuleOutputsModel(PandasModel):
-    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "key"]
+    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database", "key"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.manager = ModularSystemDataManager()
+        self.key_col = 0
         self.connect_signals()
 
     def connect_signals(self):
@@ -79,20 +80,23 @@ class ModuleOutputsModel(PandasModel):
                     "product": row['reference product'].values[0],
                     "name": row['name'].values[0],
                     "location": row['location'].values[0],
+                    "database": out_key[0],
                     "key": out_key
                 })
 
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
+        self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
 
 class ModuleChainModel(PandasModel):
     """Contain data for chain in module."""
-    HEADERS = ["product", "name", "location", "unit", "key"]
+    HEADERS = ["product", "name", "location", "unit", "database", "key"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.manager = ModularSystemDataManager()
+        self.key_col = 0
         self.connect_signals()
 
     def connect_signals(self):
@@ -117,8 +121,8 @@ class ModuleChainModel(PandasModel):
             db = db[db['key'].isin(chain)]
             chain_df = pd.concat([chain_df, db])
 
-        chain_df = chain_df[["reference product", "name", "location", "unit", "key"]]
+        chain_df = chain_df[["reference product", "name", "location", "unit", "database", "key"]]
         chain_df.rename(columns={"reference product": "product"}, inplace=True)
         self._dataframe = chain_df
-
+        self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
