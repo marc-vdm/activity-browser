@@ -150,6 +150,7 @@ class ModuleCutsModel(BaseTreeModel):
         self.cut_col = 0
         self.cut_products = []
 
+        self.setup_model_data()
         self.connect_signals()
 
     def connect_signals(self):
@@ -181,6 +182,12 @@ class ModuleCutsModel(BaseTreeModel):
             if raw_module['name'] == module_name:
                 cuts = raw_module['cuts']
                 break
+
+        # check if there are cuts, if not, skip further actions
+        if len(cuts) == 0:
+            self.cut_products = []
+            self.updated.emit()
+            return
 
         output_keys = []
         c = 0
