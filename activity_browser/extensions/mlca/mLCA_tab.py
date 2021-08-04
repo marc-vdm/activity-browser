@@ -17,6 +17,7 @@ from .mLCA_tables import (
     ModuleDatabaseTable,
     ModuleOutputsTable,
     ModuleChainTable,
+    ModuleCutsTree
 )
 
 from .modularsystem import ModularSystemDataManager
@@ -412,7 +413,7 @@ class ModuleWidget(QtWidgets.QWidget):
         self.outputs_table = ModuleOutputsTable(self) #TODO replace with module outputs table
         self.chain_table = ModuleChainTable(self)  # TODO replace with module chain table
         #self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
-        self.cuts_table = ActivitiesBiosphereTable(self)  # TODO replace with module cuts table/tree
+        self.cuts_table = ModuleCutsTree(self)  # TODO replace with module cuts table/tree
 
         # Header widget
         self.header_widget = QtWidgets.QWidget()

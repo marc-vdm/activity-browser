@@ -147,3 +147,40 @@ class ModuleChainTable(ABDataFrameView):
     def update_table(self):
         pass
 
+class ModuleCutsTree(ABDictTreeView):
+    """ TODO description
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred,
+            QtWidgets.QSizePolicy.Maximum
+        ))
+
+        self.model = ModuleCutsModel(parent=self)
+        self.setModel(self.model)
+
+        #self.model.sync()
+
+        self._connect_signals()
+
+    def _connect_signals(self):
+        super()._connect_signals()
+        self.model.updated.connect(self.custom_view_sizing)
+        self.model.updated.connect(self.expandAll)
+
+        #self.doubleClicked.connect(self.method_selected)
+
+    def custom_view_sizing(self) -> None:
+        self.setColumnHidden(self.model.key_col, True)
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
+        ))
+
+    def contextMenuEvent(self) -> None:
+        #TODO add context items
+        menu = QtWidgets.QMenu(self)
+
+    def update_tree(self):
+        pass
