@@ -184,11 +184,56 @@ class ModuleDatabaseModel(PandasModel):
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.updated.emit()
 
+class ModuleOutputsModel(PandasModel):
+    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.manager = ModularSystemDataManager()
+        self.connect_signals()
+
+    def connect_signals(self):
+        mlca_signals.module_selected.connect(self.sync)
+
+    def get_SOMETHING_name(self, proxy: QModelIndex) -> str:
+        # TODO replace SOMETHING name
+        idx = self.proxy_to_source(proxy)
+        return self._dataframe.iat[idx.row(), 0]
+
+    def sync(self, module_name: str) -> None:
+
+        for raw_module in self.manager.open_raw():
+            if raw_module['name'] == module_name:
+                outputs = raw_module['outputs']
+                break
+
+        databases = list(set(o[0][0] for o in outputs))
+        output_keys = {k: [v1, v2] for k, v1, v2 in outputs}
+
+        data = []
+        for database in databases:
+            db = AB_metadata.get_database_metadata(database)
+            for out_key, out_vals in output_keys.items():
+                row = db[db['key'] == out_key]
+                data.append({
+                    "custom name": out_vals[0],
+                    "quantity": out_vals[1],
+                    "unit": row['unit'].values[0],
+                    "product": row['reference product'].values[0],
+                    "name": row['name'].values[0],
+                    "location": row['location'].values[0],
+                    "database": out_key[0]
+                })
+
+        self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
+        self.updated.emit()
+
 class ModuleChainModel(PandasModel):
     """Contain data for chain in module."""
     HEADERS = ["product", "name", "location", "unit", "database"]
 
-    def __init__(self, parent=None, module=None):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.manager = ModularSystemDataManager()
@@ -222,9 +267,3 @@ class ModuleChainModel(PandasModel):
         self._dataframe = chain_df
 
         self.updated.emit()
-
-class ModuleCutsModel(PandasModel):
-    HEADERS = ["product", "name", "location", "amount", "unit", "database"]
-
-    def __init__(self, parent=None, module=None):
-        super().__init__(parent=parent)

@@ -15,7 +15,8 @@ from activity_browser.bwutils.commontasks import update_and_shorten_label
 from .modularsystem import ModularSystem
 from .mLCA_tables import (
     ModuleDatabaseTable,
-    ModuleChainTable
+    ModuleOutputsTable,
+    ModuleChainTable,
 )
 
 from .modularsystem import ModularSystemDataManager
@@ -408,7 +409,7 @@ class ModuleWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(ModuleWidget, self).__init__(parent)
 
-        self.outputs_table = ActivitiesBiosphereTable(self) #TODO replace with module outputs table
+        self.outputs_table = ModuleOutputsTable(self) #TODO replace with module outputs table
         self.chain_table = ModuleChainTable(self)  # TODO replace with module chain table
         #self.chain_table = ActivitiesBiosphereTable(self)  # TODO replace with module chain table
         self.cuts_table = ActivitiesBiosphereTable(self)  # TODO replace with module cuts table/tree
