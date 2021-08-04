@@ -161,7 +161,6 @@ class ModuleCutsTree(ABDictTreeView):
         self.model = ModuleCutsModel(parent=self)
         self.setModel(self.model)
 
-        #self.model.sync()
         self.model.updated.connect(self.custom_view_sizing)
         self.model.updated.connect(self.expandAll)
 
@@ -169,10 +168,25 @@ class ModuleCutsTree(ABDictTreeView):
 
     def _connect_signals(self):
         super()._connect_signals()
-        #self.model.updated.connect(self.custom_view_sizing)
-        #self.model.updated.connect(self.expandAll)
 
-        #self.doubleClicked.connect(self.method_selected)
+        self.doubleClicked.connect(self.cut_selected)
+
+    def cut_selected(self):
+        tree_level = self.tree_level()
+        if tree_level[0] == 'leaf':
+            signals.open_activity_tab.emit(tree_level[1])
+
+    def tree_level(self) -> tuple:
+        """Return tuple of (tree level, content)."""
+        indexes = self.selectedIndexes()
+        if indexes[1].data() != '':
+            # unhide and rehide 'key' column to extract the activity key
+            self.setColumnHidden(self.model.key_col, False)
+            indexes = self.selectedIndexes()
+            self.setColumnHidden(self.model.key_col, True)
+            return 'leaf', indexes[-1].data()
+        else:
+            return 'root', indexes[0].data()
 
     def custom_view_sizing(self) -> None:
         self.setColumnHidden(self.model.key_col, True)
