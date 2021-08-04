@@ -163,6 +163,7 @@ class ModuleCutsTree(ABDictTreeView):
 
         self.model.updated.connect(self.custom_view_sizing)
         self.model.updated.connect(self.expandAll)
+        self.model.updated.connect(self.update_tree)
 
         self._connect_signals()
 
@@ -201,3 +202,7 @@ class ModuleCutsTree(ABDictTreeView):
 
     def update_tree(self):
         pass
+        if len(self.model.cut_products) == 0:
+            self.hide()
+        else:
+            self.show()
