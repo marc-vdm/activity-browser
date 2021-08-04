@@ -153,14 +153,13 @@ class ModuleDatabaseModel(PandasModel):
         self.updated.emit()"""
 
 class ModuleDatabaseModel(PandasModel):
-    """Contain data for all modules in the modular system database"""
+    """Contain data for all modules in the modular system database."""
     HEADERS = ["Name", "out/chain/cuts", "Outputs", "Cuts", "Chain"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.manager = ModularSystemDataManager()
-
         self.connect_signals()
 
     def connect_signals(self):
@@ -186,14 +185,13 @@ class ModuleDatabaseModel(PandasModel):
         self.updated.emit()
 
 class ModuleChainModel(PandasModel):
+    """Contain data for chain in module."""
     HEADERS = ["product", "name", "location", "unit", "database"]
 
     def __init__(self, parent=None, module=None):
         super().__init__(parent=parent)
 
-        self.module = module
         self.manager = ModularSystemDataManager()
-
         self.connect_signals()
 
     def connect_signals(self):
@@ -203,9 +201,6 @@ class ModuleChainModel(PandasModel):
         #TODO replace SOMETHING name
         idx = self.proxy_to_source(proxy)
         return self._dataframe.iat[idx.row(), 0]
-
-    def open_mlca_db(self, path) -> None:
-        self.mlca_db.load_from_file(filepath=path)
 
     def sync(self, module_name: str) -> None:
 
