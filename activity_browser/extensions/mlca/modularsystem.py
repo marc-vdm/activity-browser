@@ -452,6 +452,7 @@ class ModularSystemDataManager(object):
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
         mlca_signals.del_module.connect(self.del_module)
+        mlca_signals.copy_module.connect(self.copy_module)
 
     def project_change(self):
         """Get project's new modular system location"""
@@ -510,7 +511,7 @@ class ModularSystemDataManager(object):
         else:
             return self.open_modular_system()
 
-    def add_module(self, module_name):
+    def add_module(self, module_name, outputs=[], chain=[], cuts=[], *args, **kwargs):
         """Add module to modular system."""
         print('++ Add module:', module_name, '[SAVING NOT IMPLEMENTED]')
 
@@ -522,9 +523,9 @@ class ModularSystemDataManager(object):
 
         # add the new module
         modular_system.add_mp(mp_list=[{'name': module_name,
-                                        'outputs': [],
-                                        'chain': [],
-                                        'cuts': []
+                                        'outputs': outputs,
+                                        'chain': chain,
+                                        'cuts': cuts
                                         }])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
@@ -550,6 +551,17 @@ class ModularSystemDataManager(object):
 
         # save the updated modular system to disk
         #TODO
+
+    def copy_module(self, module_name):
+        """Copy module in modular system, copy name is 'original_COPY'."""
+        print('++ Copy module:', module_name, '[SAVING NOT IMPLEMENTED]')
+        # get data to copy
+        for raw_module in self.raw_data:
+            if raw_module['name'] == module_name:
+                module = raw_module
+                break
+        module['module_name'] = module['name'] + '_COPY'
+        self.add_module(**module)
 
     @property
     def module_names(self):

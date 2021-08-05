@@ -54,6 +54,7 @@ class GenericModuleModel(PandasModel):
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
+        mlca_signals.module_db_changed.connect(self.sync)
 
     def get_activity_key(self, proxy: QModelIndex) -> str:
         idx = self.proxy_to_source(proxy)
@@ -157,6 +158,7 @@ class ModuleCutsModel(BaseTreeModel):
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
+        mlca_signals.module_db_changed.connect(self.sync)
 
     def setup_model_data(self) -> None:
         """Construct a nested dict of the self._dataframe.
