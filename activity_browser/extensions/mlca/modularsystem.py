@@ -511,8 +511,8 @@ class ModularSystemDataManager(object):
             return self.open_modular_system()
 
     def add_module(self, module_name):
-        """Add module to modular system"""
-        print('++ Add module:', module_name, '[NOT IMPLEMENTED]')
+        """Add module to modular system."""
+        print('++ Add module:', module_name, '[SAVING NOT IMPLEMENTED]')
 
         # open the file
         if self.raw_data:
@@ -528,12 +528,28 @@ class ModularSystemDataManager(object):
                                         }])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
+        mlca_signals.module_db_changed.emit()
 
         # save the updated modular system to disk
-
+        #TODO
 
     def del_module(self, module_name):
-        print('++ Delete module:', module_name, '[NOT IMPLEMENTED]')
+        """Delete module from modular system."""
+        print('++ Delete module:', module_name, '[SAVING NOT IMPLEMENTED]')
+        # open the file
+        if self.raw_data:
+            modular_system = self.modular_system_from_raw()
+        else:
+            modular_system = self.open_modular_system()
+
+        # delete the new module
+        modular_system.remove_mp([module_name])
+        self.modular_system = modular_system
+        self.raw_data = modular_system.raw_data
+        mlca_signals.module_db_changed.emit()
+
+        # save the updated modular system to disk
+        #TODO
 
     @property
     def module_names(self):

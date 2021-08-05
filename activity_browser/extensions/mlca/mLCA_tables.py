@@ -32,7 +32,7 @@ class ModuleDatabaseTable(ABDataFrameView):
 
 
         self.doubleClicked.connect(
-            lambda p: mlca_signals.module_selected.emit(self.model.get_module_name(p))
+            lambda: mlca_signals.module_selected.emit(self.selected_module_name)
         ) #TODO link this also to graph view opening??
 
         self.model.updated.connect(self.update_proxy_model)
@@ -41,7 +41,12 @@ class ModuleDatabaseTable(ABDataFrameView):
     def contextMenuEvent(self, event) -> None:
         #TODO add context items
         menu = QtWidgets.QMenu(self)
-        #menu.addAction(qicons.delete, "Delete module", self.open_activity_tabs)
+        menu.addAction(
+            qicons.delete, "Delete module",
+            lambda: mlca_signals.del_module.emit(self.selected_module_name)
+        )
+
+        menu.exec_(event.globalPos())
 
     @property
     def selected_module_name(self) -> str:
@@ -68,10 +73,10 @@ class GenericModuleTable(ABDataFrameView):
         #mlca_signals.module_selected.connect(self.update_table)
 
         self.doubleClicked.connect(
-            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
+            lambda: signals.open_activity_tab.emit(self.selected_activity_key)
         )  # TODO link this also to graph view opening??
         self.doubleClicked.connect(
-            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
+            lambda: signals.add_activity_to_history.emit(self.selected_activity_key)
         )
 
         self.model.updated.connect(self.update_proxy_model)
@@ -82,10 +87,10 @@ class GenericModuleTable(ABDataFrameView):
         menu = QtWidgets.QMenu(self)
 
     @property
-    def selected_module_name(self) -> str:
+    def selected_activity_key(self) -> str:
         """ Return the database name of the user-selected index.
         """
-        return self.model.get_module_name(self.currentIndex())
+        return self.model.get_activity_key(self.currentIndex())
 
     def custom_view_sizing(self) -> None:
         self.setColumnHidden(self.model.key_col, True)
