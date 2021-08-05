@@ -84,7 +84,6 @@ class mLCATab(QtWidgets.QWidget):
         if ok and name:
             if name not in modular_system_data_manager.module_names:
                 modular_system_data_manager.add_module(name)
-                mlca_signals.module_db_changed.emit()
                 mlca_signals.module_selected.emit(name)
             else:
                 QtWidgets.QMessageBox.information(
@@ -279,6 +278,7 @@ class ModuleWidget(QtWidgets.QWidget):
         self.outputs_table = ModuleOutputsTable(self)
         self.chain_table = ModuleChainTable(self)
         self.cuts_tree = ModuleCutsTree(self)
+        self.current_module = None
 
         # Header widget
         self.header_widget = QtWidgets.QWidget()
@@ -307,7 +307,7 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def connect_signals(self):
         signals.project_selected.connect(self.reset_widget)
-        #mlca_signals.database_selected.connect(self.reset_widget)
+        mlca_signals.del_module.connect(self.reset_widget)
         mlca_signals.module_selected.connect(self.update_widget)
         #self.output_scaling_checkbox.toggled.connect()
 
@@ -326,9 +326,12 @@ class ModuleWidget(QtWidgets.QWidget):
         layout.addWidget(self.cuts_tree)
         self.setLayout(layout)
 
-    def reset_widget(self):
-        self.hide()
+    def reset_widget(self, deleted_module=None):
+        if deleted_module == self.current_module or not deleted_module:
+            self.hide()
+            self.current_module = None
 
     def update_widget(self, module_name=''):
-        self.show()
+        self.current_module = module_name
         self.module_name_field.setText(module_name)
+        self.show()
