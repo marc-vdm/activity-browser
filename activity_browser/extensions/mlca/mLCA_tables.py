@@ -45,6 +45,10 @@ class ModuleDatabaseTable(ABDataFrameView):
             qicons.delete, "Delete module",
             lambda: mlca_signals.del_module.emit(self.selected_module_name)
         )
+        menu.addAction(
+            qicons.copy, "Copy module",
+            lambda: mlca_signals.copy_module.emit(self.selected_module_name)
+        )
 
         menu.exec_(event.globalPos())
 
