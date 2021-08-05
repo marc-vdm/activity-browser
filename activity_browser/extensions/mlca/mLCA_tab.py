@@ -14,7 +14,7 @@ from .mLCA_tables import (
     ModuleChainTable,
     ModuleCutsTree
 )
-from .modularsystem import modular_system_data_manager
+from .modularsystem import modular_system_controller
 
 from .mlca_icons import mlca_qicons
 
@@ -83,8 +83,8 @@ class mLCATab(QtWidgets.QWidget):
         )
 
         if ok and name:
-            if name not in modular_system_data_manager.module_names:
-                modular_system_data_manager.add_module(name)
+            if name not in modular_system_controller.module_names:
+                modular_system_controller.add_module(name)
                 mlca_signals.module_selected.emit(name)
             else:
                 QtWidgets.QMessageBox.information(
@@ -100,8 +100,8 @@ class mLCATab(QtWidgets.QWidget):
         )
 
         if ok and name:
-            if name not in modular_system_data_manager.module_names:
-                modular_system_data_manager.rename_module(module_name, name)
+            if name not in modular_system_controller.module_names:
+                modular_system_controller.rename_module(module_name, name)
             else:
                 QtWidgets.QMessageBox.information(
                     self.window, "Not possible", "A module with this name already exists."
@@ -353,7 +353,7 @@ class ModuleWidget(QtWidgets.QWidget):
     def module_name_change(self):
         #print('module name change', self.module_name_field.text())
         #mlca_signals.rename_module.emit((self.current_module, self.module_name_field.text))
-        modular_system_data_manager.rename_module(self.current_module, self.module_name_field.text())
+        modular_system_controller.rename_module(self.current_module, self.module_name_field.text())
 
     def update_widget(self, module_name=''):
         self.current_module = module_name

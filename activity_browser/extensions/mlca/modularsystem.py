@@ -435,7 +435,7 @@ class ModularSystem(object):
             return path_lca_data
 
 
-class ModularSystemDataManager(object):
+class ModularSystemController(object):
     """Manages the data of the modular system.
     Data manager takes care of saving data to the right place and opening the right modular systems"""
     def __init__(self):
@@ -593,4 +593,4 @@ class ModularSystemDataManager(object):
             ModularSystem().save_to_file(filepath=ms_file)
         return ms_file
 
-modular_system_data_manager = ModularSystemDataManager()
+modular_system_controller = ModularSystemController()
