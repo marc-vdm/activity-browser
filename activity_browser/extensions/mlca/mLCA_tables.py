@@ -1,4 +1,5 @@
-from ...ui.tables.views import ABDataFrameView, ABDictTreeView
+from activity_browser.ui.tables.views import ABDataFrameView, ABDictTreeView
+from activity_browser.ui.icons import qicons
 from .mLCA_table_models import (
     ModuleDatabaseModel,
     ModuleChainModel,
@@ -37,9 +38,10 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
 
-    def contextMenuEvent(self) -> None:
+    def contextMenuEvent(self, event) -> None:
         #TODO add context items
         menu = QtWidgets.QMenu(self)
+        #menu.addAction(qicons.delete, "Delete module", self.open_activity_tabs)
 
     @property
     def selected_module_name(self) -> str:

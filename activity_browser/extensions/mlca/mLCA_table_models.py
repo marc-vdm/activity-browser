@@ -11,6 +11,7 @@ from activity_browser.bwutils import AB_metadata
 
 from .mLCA_signals import mlca_signals
 from .modularsystem import ModularSystemDataManager
+from .modularsystem import modular_system_data_manager
 
 class ModuleDatabaseModel(PandasModel):
     """Contain data for all modules in the modular system database."""
@@ -19,7 +20,6 @@ class ModuleDatabaseModel(PandasModel):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.manager = ModularSystemDataManager()
         self.connect_signals()
 
     def connect_signals(self):
@@ -31,7 +31,7 @@ class ModuleDatabaseModel(PandasModel):
 
     def sync(self):
         data = []
-        for raw_module in self.manager.open_raw():
+        for raw_module in modular_system_data_manager.open_raw():
             numbers = [len(raw_module['outputs']), len(set(raw_module['chain'])), len(set(raw_module['cuts']))]
             data.append({
                 'Name': raw_module['name'],
@@ -67,7 +67,7 @@ class ModuleOutputsModel(GenericModuleModel):
         self.connect_signals()
 
     def sync(self, module_name: str) -> None:
-        for raw_module in ModularSystemDataManager().open_raw():
+        for raw_module in modular_system_data_manager.open_raw():
             if raw_module['name'] == module_name:
                 outputs = raw_module['outputs']
                 break
@@ -106,7 +106,7 @@ class ModuleChainModel(GenericModuleModel):
         self.connect_signals()
 
     def sync(self, module_name: str) -> None:
-        for raw_module in ModularSystemDataManager().open_raw():
+        for raw_module in modular_system_data_manager.open_raw():
             if raw_module['name'] == module_name:
                 chain = raw_module['chain']
                 break
@@ -174,7 +174,7 @@ class ModuleCutsModel(BaseTreeModel):
         self.endResetModel()
 
         # get data
-        for raw_module in ModularSystemDataManager().open_raw():
+        for raw_module in modular_system_data_manager.open_raw():
             if raw_module['name'] == module_name:
                 cuts = raw_module['cuts']
                 break
