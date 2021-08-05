@@ -47,9 +47,9 @@ class ModuleDatabaseTable(ABDataFrameView):
         """
         return self.model.get_module_name(self.currentIndex())
 
-class ModuleOutputsTable(ABDataFrameView):
+class GenericModuleTable(ABDataFrameView):
     """ TODO description
-    """
+        """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().setVisible(False)
@@ -59,93 +59,58 @@ class ModuleOutputsTable(ABDataFrameView):
             QtWidgets.QSizePolicy.Preferred,
             QtWidgets.QSizePolicy.Maximum
         ))
+
+    def _connect_signals(self):
+        #TODO link these signals
+        pass
+        #mlca_signals.module_selected.connect(self.update_table)
+
+        self.doubleClicked.connect(
+            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
+        )  # TODO link this also to graph view opening??
+        self.doubleClicked.connect(
+            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
+        )
+
+        self.model.updated.connect(self.update_proxy_model)
+        self.model.updated.connect(self.custom_view_sizing)
+
+    def contextMenuEvent(self) -> None:
+        #TODO add context items
+        menu = QtWidgets.QMenu(self)
+
+    @property
+    def selected_module_name(self) -> str:
+        """ Return the database name of the user-selected index.
+        """
+        return self.model.get_module_name(self.currentIndex())
+
+    def custom_view_sizing(self) -> None:
+        self.setColumnHidden(self.model.key_col, True)
+        self.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
+        ))
+
+    def update_table(self):
+        pass
+
+class ModuleOutputsTable(GenericModuleTable):
+    """ TODO description
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.model = ModuleOutputsModel(parent=self)
         self._connect_signals()
 
-    def _connect_signals(self):
-        #TODO link these signals
-        pass
-        #mlca_signals.module_selected.connect(self.update_table)
-
-        self.doubleClicked.connect(
-            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
-        )  # TODO link this also to graph view opening??
-        self.doubleClicked.connect(
-            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
-        )
-
-        self.model.updated.connect(self.update_proxy_model)
-        self.model.updated.connect(self.custom_view_sizing)
-
-    def contextMenuEvent(self) -> None:
-        #TODO add context items
-        menu = QtWidgets.QMenu(self)
-
-    @property
-    def selected_module_name(self) -> str:
-        """ Return the database name of the user-selected index.
-        """
-        return self.model.get_module_name(self.currentIndex())
-
-    def custom_view_sizing(self) -> None:
-        self.setColumnHidden(self.model.key_col, True)
-        self.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
-        ))
-
-    def update_table(self):
-        pass
-
-class ModuleChainTable(ABDataFrameView):
+class ModuleChainTable(GenericModuleTable):
     """ TODO description
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.verticalHeader().setVisible(False)
-        self.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-
-        self.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred,
-            QtWidgets.QSizePolicy.Maximum
-        ))
 
         self.model = ModuleChainModel(parent=self)
         self._connect_signals()
-
-    def _connect_signals(self):
-        #TODO link these signals
-        pass
-        #mlca_signals.module_selected.connect(self.update_table)
-
-        self.doubleClicked.connect(
-            lambda p: signals.open_activity_tab.emit(self.model.get_activity_key(p))
-        )  # TODO link this also to graph view opening??
-        self.doubleClicked.connect(
-            lambda p: signals.add_activity_to_history.emit(self.model.get_activity_key(p))
-        )
-
-        self.model.updated.connect(self.update_proxy_model)
-        self.model.updated.connect(self.custom_view_sizing)
-
-    def contextMenuEvent(self) -> None:
-        #TODO add context items
-        menu = QtWidgets.QMenu(self)
-
-    @property
-    def selected_module_name(self) -> str:
-        """ Return the database name of the user-selected index.
-        """
-        return self.model.get_module_name(self.currentIndex())
-
-    def custom_view_sizing(self) -> None:
-        self.setColumnHidden(self.model.key_col, True)
-        self.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
-        ))
-
-    def update_table(self):
-        pass
 
 class ModuleCutsTree(ABDictTreeView):
     """ TODO description

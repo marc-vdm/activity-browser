@@ -43,15 +43,13 @@ class ModuleDatabaseModel(PandasModel):
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.updated.emit()
 
-class ModuleOutputsModel(PandasModel):
-    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database", "key"]
+class GenericModuleModel(PandasModel):
+    HEADERS = []
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.manager = ModularSystemDataManager()
         self.key_col = 0
-        self.connect_signals()
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
@@ -60,8 +58,16 @@ class ModuleOutputsModel(PandasModel):
         idx = self.proxy_to_source(proxy)
         return self._dataframe.iat[idx.row(), -1]
 
+class ModuleOutputsModel(GenericModuleModel):
+    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database", "key"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.connect_signals()
+
     def sync(self, module_name: str) -> None:
-        for raw_module in self.manager.open_raw():
+        for raw_module in ModularSystemDataManager().open_raw():
             if raw_module['name'] == module_name:
                 outputs = raw_module['outputs']
                 break
@@ -90,26 +96,17 @@ class ModuleOutputsModel(PandasModel):
         self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
 
-class ModuleChainModel(PandasModel):
+class ModuleChainModel(GenericModuleModel):
     """Contain data for chain in module."""
     HEADERS = ["product", "name", "location", "unit", "database", "key"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.manager = ModularSystemDataManager()
-        self.key_col = 0
         self.connect_signals()
 
-    def connect_signals(self):
-        mlca_signals.module_selected.connect(self.sync)
-
-    def get_activity_key(self, proxy: QModelIndex) -> str:
-        idx = self.proxy_to_source(proxy)
-        return self._dataframe.iat[idx.row(), -1]
-
     def sync(self, module_name: str) -> None:
-        for raw_module in self.manager.open_raw():
+        for raw_module in ModularSystemDataManager().open_raw():
             if raw_module['name'] == module_name:
                 chain = raw_module['chain']
                 break
@@ -144,7 +141,6 @@ class ModuleCutsModel(BaseTreeModel):
         super().__init__(parent=parent)
 
         self.root = ModuleCutsItem.build_root(self.HEADERS)
-        self.manager = ModularSystemDataManager()
         self._dataframe = None
         self.key_col = 0
         self.cut_col = 0
@@ -178,7 +174,7 @@ class ModuleCutsModel(BaseTreeModel):
         self.endResetModel()
 
         # get data
-        for raw_module in self.manager.open_raw():
+        for raw_module in ModularSystemDataManager().open_raw():
             if raw_module['name'] == module_name:
                 cuts = raw_module['cuts']
                 break
