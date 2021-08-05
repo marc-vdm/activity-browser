@@ -47,6 +47,7 @@ class mLCATab(QtWidgets.QWidget):
         pass
 
         mlca_signals.new_module.connect(self.new_module_dialog)
+        mlca_signals.rename_module.connect(self.rename_module_dialog)
 
     def change_project(self):
         pass
@@ -85,6 +86,22 @@ class mLCATab(QtWidgets.QWidget):
             if name not in modular_system_data_manager.module_names:
                 modular_system_data_manager.add_module(name)
                 mlca_signals.module_selected.emit(name)
+            else:
+                QtWidgets.QMessageBox.information(
+                    self.window, "Not possible", "A module with this name already exists."
+                )
+
+    def rename_module_dialog(self, module_name):
+        """Dialog to rename a module in the modular system"""
+        name, ok = QtWidgets.QInputDialog.getText(
+            self.window,
+            "Rename module '{}'".format(module_name),
+            "New name of module:" + " " * 25
+        )
+
+        if ok and name:
+            if name not in modular_system_data_manager.module_names:
+                modular_system_data_manager.rename_module(module_name, name)
             else:
                 QtWidgets.QMessageBox.information(
                     self.window, "Not possible", "A module with this name already exists."
@@ -308,7 +325,9 @@ class ModuleWidget(QtWidgets.QWidget):
     def connect_signals(self):
         signals.project_selected.connect(self.reset_widget)
         mlca_signals.del_module.connect(self.reset_widget)
+        mlca_signals.rename_module.connect(self.reset_widget)
         mlca_signals.module_selected.connect(self.update_widget)
+        self.module_name_field.editingFinished.connect(self.module_name_change)
         #self.output_scaling_checkbox.toggled.connect()
 
     def construct_layout(self):
@@ -330,6 +349,11 @@ class ModuleWidget(QtWidgets.QWidget):
         if deleted_module == self.current_module or not deleted_module:
             self.hide()
             self.current_module = None
+
+    def module_name_change(self):
+        #print('module name change', self.module_name_field.text())
+        #mlca_signals.rename_module.emit((self.current_module, self.module_name_field.text))
+        modular_system_data_manager.rename_module(self.current_module, self.module_name_field.text())
 
     def update_widget(self, module_name=''):
         self.current_module = module_name
