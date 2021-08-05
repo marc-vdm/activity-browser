@@ -438,6 +438,9 @@ class ModularSystemDataManager(object):
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
 
+        self.modular_system_data = None
+        self.raw_data = None
+
         self.modular_system_path
 
         self.connect_signals()
@@ -450,6 +453,11 @@ class ModularSystemDataManager(object):
         # update the project/folder now that the old location is saved to
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
+        # re-open the data from disk if it was open
+        if self.raw_data:
+            self.open_raw(force_open=True)
+        if self.modular_system_data:
+            self.open_modular_system(force_open=True)
 
     def save_modular_system(self):
         """Properly save modular system"""
@@ -458,30 +466,50 @@ class ModularSystemDataManager(object):
         #ModularSystem.save_to_file(modular_system, filepath=ms_file)
         pass
 
-    def open_modular_system(self, path=None):
+    def open_modular_system(self, path=None, force_open=False):
         """Load modular system from file and return the modular system object."""
         if not path:
             path = self.modular_system_path
-        modular_system = ModularSystem()
-        modular_system.load_from_file(filepath=path)
-        return modular_system
 
-    def open_raw(self, path=None):
+        # only load if not loaded already
+        if self.modular_system_data and not force_open:
+            return self.modular_system_data
+        else:
+            modular_system_data = ModularSystem()
+            modular_system_data.load_from_file(filepath=path)
+            self.modular_system_data = modular_system_data
+            # load raw data too when we're loading the full system
+            if not self.raw_data:
+                self.raw_data = self.modular_system_data.raw_data()
+            return self.modular_system_data
+
+    def open_raw(self, path=None, force_open=False):
         """Load raw modular system data and return the raw data."""
         if not path:
             path = self.modular_system_path
-        #modular_system = ModularSystem()
-        return ModularSystem().load_from_file(filepath=path, raw=True)
 
-    def modular_system_from_raw(self, raw_data=[]):
+        # only load if not loaded already
+        if self.raw_data and not force_open:
+            return self.raw_data
+        else:
+            self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
+            return self.raw_data
+
+    def modular_system_from_raw(self):
         """Generate a modular system from raw data.
         open raw and this function together do the same as the open_modular_system function."""
-        mp_list = [Module(**mp) for mp in raw_data]
-        return ModularSystem(mp_list=mp_list)
+        if self.raw_data:
+            mp_list = [Module(**mp) for mp in self.raw_data]
+            self.modular_system_data = ModularSystem(mp_list=mp_list)
+            return self.modular_system_data
+        else:
+            return self.open_modular_system()
 
-    def add_module(self):
-        pass
+    def add_module(self, module):
+        print('++ Add module:', module, '[NOT IMPLEMENTED]')
 
+    def del_module(self, module):
+        print('++ Delete module:', module, '[NOT IMPLEMENTED]')
 
     @property
     def modular_system_path(self):
@@ -499,3 +527,5 @@ class ModularSystemDataManager(object):
             ModularSystem().save_to_file(filepath=ms_file)
 
         return ms_file
+
+modular_system_data_manager = ModularSystemDataManager()

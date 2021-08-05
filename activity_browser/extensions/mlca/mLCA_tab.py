@@ -14,8 +14,7 @@ from .mLCA_tables import (
     ModuleChainTable,
     ModuleCutsTree
 )
-
-from .modularsystem import ModularSystemDataManager
+from .modularsystem import modular_system_data_manager
 
 from .mlca_icons import mlca_qicons
 
@@ -25,7 +24,6 @@ from .mLCA_signals import mlca_signals
 class mLCATab(QtWidgets.QWidget):
     def __init__(self, parent):
         super(mLCATab, self).__init__(parent)
-        self.manager = ModularSystemDataManager()
 
         # main widgets
         self.modular_database_widget = ModularDatabaseWidget(self)
