@@ -24,6 +24,17 @@ class ModuleDatabaseTable(ABDataFrameView):
             QtWidgets.QSizePolicy.Maximum
         ))
 
+        # context menu
+        self.delete_module_action = QtWidgets.QAction(
+            qicons.delete, "Delete module", None
+        )
+        self.copy_module_action = QtWidgets.QAction(
+            qicons.copy, "Copy module", None
+        )
+        self.rename_module_action = QtWidgets.QAction(
+            qicons.edit, "Rename module", None
+        )
+
         self.model = ModuleDatabaseModel(parent=self)
         self._connect_signals()
 
@@ -38,17 +49,36 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
 
+        # context menu
+        self.delete_module_action.triggered.connect(
+            lambda: mlca_signals.del_module.emit(self.selected_module_name)
+        )
+        self.copy_module_action.triggered.connect(
+            lambda: mlca_signals.copy_module.emit(self.selected_module_name)
+        )
+        self.rename_module_action.triggered.connect(
+            lambda: mlca_signals.rename_module.emit(self.selected_module_name)
+        )
+
     def contextMenuEvent(self, event) -> None:
         #TODO add context items
         menu = QtWidgets.QMenu(self)
-        menu.addAction(
-            qicons.delete, "Delete module",
-            lambda: mlca_signals.del_module.emit(self.selected_module_name)
-        )
-        menu.addAction(
-            qicons.copy, "Copy module",
-            lambda: mlca_signals.copy_module.emit(self.selected_module_name)
-        )
+        menu.addAction(self.delete_module_action)
+        menu.addAction(self.copy_module_action)
+        menu.addAction(self.rename_module_action)
+
+        #menu.addAction(
+        #    qicons.delete, "Delete module",
+        #    lambda: mlca_signals.del_module.emit(self.selected_module_name)
+        #)
+        #menu.addAction(
+        #    qicons.copy, "Copy module",
+        #    lambda: mlca_signals.copy_module.emit(self.selected_module_name)
+        #)
+        #menu.addAction(
+        #    qicons.edit, "Rename module",
+        #    lambda: mlca_signals.rename_module.emit(self.selected_module_name)
+        #)
 
         menu.exec_(event.globalPos())
 

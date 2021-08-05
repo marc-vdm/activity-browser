@@ -511,10 +511,8 @@ class ModularSystemDataManager(object):
         else:
             return self.open_modular_system()
 
-    def add_module(self, module_name, outputs=[], chain=[], cuts=[], *args, **kwargs):
+    def add_module(self, module_name, outputs=[], chain=[], cuts=[], update=True, *args, **kwargs):
         """Add module to modular system."""
-        print('++ Add module:', module_name, '[SAVING NOT IMPLEMENTED]')
-
         # open the file
         if self.raw_data:
             modular_system = self.modular_system_from_raw()
@@ -529,14 +527,15 @@ class ModularSystemDataManager(object):
                                         }])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
-        mlca_signals.module_db_changed.emit()
 
         # save the updated modular system to disk
         #TODO
 
-    def del_module(self, module_name):
+        if update:
+            mlca_signals.module_db_changed.emit()
+
+    def del_module(self, module_name, update=True):
         """Delete module from modular system."""
-        print('++ Delete module:', module_name, '[SAVING NOT IMPLEMENTED]')
         # open the file
         if self.raw_data:
             modular_system = self.modular_system_from_raw()
@@ -547,21 +546,32 @@ class ModularSystemDataManager(object):
         modular_system.remove_mp([module_name])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
-        mlca_signals.module_db_changed.emit()
 
         # save the updated modular system to disk
         #TODO
 
-    def copy_module(self, module_name):
+        if update:
+            mlca_signals.module_db_changed.emit()
+
+    def copy_module(self, module_name, copy_name=None, update=True):
         """Copy module in modular system, copy name is 'original_COPY'."""
-        print('++ Copy module:', module_name, '[SAVING NOT IMPLEMENTED]')
         # get data to copy
         for raw_module in self.raw_data:
             if raw_module['name'] == module_name:
                 module = raw_module
                 break
-        module['module_name'] = module['name'] + '_COPY'
-        self.add_module(**module)
+        if not copy_name:
+            module['module_name'] = module['name'] + '_COPY'
+        else:
+            module['module_name'] = copy_name
+        self.add_module(**module, update=update)
+
+    def rename_module(self, old_module_name, new_module_name, update=False):
+        """Rename module in modular system.
+
+        In reality this function just copies and deletes the module."""
+        self.copy_module(old_module_name, new_module_name, update=update)
+        self.del_module(old_module_name)
 
     @property
     def module_names(self):
