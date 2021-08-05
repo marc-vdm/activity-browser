@@ -5,10 +5,13 @@ import pickle
 import networkx as nx  # TODO: get rid of this dependency
 import numpy as np
 
+from PySide2 import QtWidgets
+
 from .module import Module
 import brightway2 as bw
 import os
 from ...signals import signals
+from .mLCA_signals import mlca_signals
 
 class ModularSystem(object):
     """
@@ -438,15 +441,17 @@ class ModularSystemDataManager(object):
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
 
-        self.modular_system_data = None
+        self.modular_system = None
         self.raw_data = None
 
         self.modular_system_path
+        self.module_names
 
         self.connect_signals()
 
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
+        mlca_signals.del_module.connect(self.del_module)
 
     def project_change(self):
         """Get project's new modular system location"""
@@ -456,7 +461,7 @@ class ModularSystemDataManager(object):
         # re-open the data from disk if it was open
         if self.raw_data:
             self.open_raw(force_open=True)
-        if self.modular_system_data:
+        if self.modular_system:
             self.open_modular_system(force_open=True)
 
     def save_modular_system(self):
@@ -472,16 +477,16 @@ class ModularSystemDataManager(object):
             path = self.modular_system_path
 
         # only load if not loaded already
-        if self.modular_system_data and not force_open:
-            return self.modular_system_data
+        if self.modular_system and not force_open:
+            return self.modular_system
         else:
-            modular_system_data = ModularSystem()
-            modular_system_data.load_from_file(filepath=path)
-            self.modular_system_data = modular_system_data
+            modular_system = ModularSystem()
+            modular_system.load_from_file(filepath=path)
+            self.modular_system = modular_system
             # load raw data too when we're loading the full system
             if not self.raw_data:
-                self.raw_data = self.modular_system_data.raw_data()
-            return self.modular_system_data
+                self.raw_data = self.modular_system.raw_data
+            return self.modular_system
 
     def open_raw(self, path=None, force_open=False):
         """Load raw modular system data and return the raw data."""
@@ -500,16 +505,43 @@ class ModularSystemDataManager(object):
         open raw and this function together do the same as the open_modular_system function."""
         if self.raw_data:
             mp_list = [Module(**mp) for mp in self.raw_data]
-            self.modular_system_data = ModularSystem(mp_list=mp_list)
-            return self.modular_system_data
+            self.modular_system = ModularSystem(mp_list=mp_list)
+            return self.modular_system
         else:
             return self.open_modular_system()
 
-    def add_module(self, module):
-        print('++ Add module:', module, '[NOT IMPLEMENTED]')
+    def add_module(self, module_name):
+        """Add module to modular system"""
+        print('++ Add module:', module_name, '[NOT IMPLEMENTED]')
 
-    def del_module(self, module):
-        print('++ Delete module:', module, '[NOT IMPLEMENTED]')
+        # open the file
+        if self.raw_data:
+            modular_system = self.modular_system_from_raw()
+        else:
+            modular_system = self.open_modular_system()
+
+        # add the new module
+        modular_system.add_mp(mp_list=[{'name': module_name,
+                                        'outputs': [],
+                                        'chain': [],
+                                        'cuts': []
+                                        }])
+        self.modular_system = modular_system
+        self.raw_data = modular_system.raw_data
+
+        # save the updated modular system to disk
+
+
+    def del_module(self, module_name):
+        print('++ Delete module:', module_name, '[NOT IMPLEMENTED]')
+
+    @property
+    def module_names(self):
+        module_names = []
+        if self.raw_data:
+            for raw_module in self.raw_data:
+                module_names.append(raw_module['name'])
+        return module_names
 
     @property
     def modular_system_path(self):

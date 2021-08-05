@@ -24,6 +24,7 @@ from .mLCA_signals import mlca_signals
 class mLCATab(QtWidgets.QWidget):
     def __init__(self, parent):
         super(mLCATab, self).__init__(parent)
+        self.window = parent
 
         # main widgets
         self.modular_database_widget = ModularDatabaseWidget(self)
@@ -44,6 +45,8 @@ class mLCATab(QtWidgets.QWidget):
 
     def connect_signals(self):
         pass
+
+        mlca_signals.new_module.connect(self.new_module_dialog)
 
     def change_project(self):
         pass
@@ -70,6 +73,23 @@ class mLCATab(QtWidgets.QWidget):
         sizes = [x.sizeHint().height() for x in widgets]
         self.splitter.setSizes(sizes)
 
+    def new_module_dialog(self):
+        """Dialog to add a new module to the modular system"""
+        name, ok = QtWidgets.QInputDialog.getText(
+            self.window,
+            "Create new module",
+            "Name of new module:" + " " * 25
+        )
+
+        if ok and name:
+            if name not in modular_system_data_manager.module_names:
+                modular_system_data_manager.add_module(name)
+                mlca_signals.module_db_changed.emit()
+                mlca_signals.module_selected.emit(name)
+            else:
+                QtWidgets.QMessageBox.information(
+                    self.window, "Not possible", "A module with this name already exists."
+                )
 
 class ModularDatabasesWidget(QtWidgets.QWidget):
     def __init__(self):
@@ -221,7 +241,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
     def _connect_signals(self):
         mlca_signals.database_selected.connect(self.db_change)
-        #self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+        self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
 
     def db_change(self, selected):
         if selected:

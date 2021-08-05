@@ -24,6 +24,7 @@ class ModuleDatabaseModel(PandasModel):
 
     def connect_signals(self):
         signals.project_selected.connect(self.sync)
+        mlca_signals.module_db_changed.connect(self.sync)
 
     def get_module_name(self, proxy: QModelIndex) -> str:
         idx = self.proxy_to_source(proxy)
@@ -113,15 +114,20 @@ class ModuleChainModel(GenericModuleModel):
 
         databases = list(set(c[0] for c in chain))
 
-        chain_df = pd.DataFrame()
-        for database in databases:
-            db = AB_metadata.get_database_metadata(database)
-            db = db[db['key'].isin(chain)]
-            chain_df = pd.concat([chain_df, db])
+        # check if there is data, otherwise, make empty df
+        if len(databases) == 0:
+            self._dataframe = pd.DataFrame([], columns=self.HEADERS)
+        else:
+            chain_df = pd.DataFrame()
+            for database in databases:
+                db = AB_metadata.get_database_metadata(database)
+                db = db[db['key'].isin(chain)]
+                chain_df = pd.concat([chain_df, db])
 
-        chain_df = chain_df[["reference product", "name", "location", "unit", "database", "key"]]
-        chain_df.rename(columns={"reference product": "product"}, inplace=True)
-        self._dataframe = chain_df
+            chain_df = chain_df[["reference product", "name", "location", "unit", "database", "key"]]
+            chain_df.rename(columns={"reference product": "product"}, inplace=True)
+            self._dataframe = chain_df
+
         self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
 
