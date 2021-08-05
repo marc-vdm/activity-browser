@@ -460,11 +460,9 @@ class ModularSystemDataManager(object):
         # update the project/folder now that the old location is saved to
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
-        # re-open the data from disk if it was open
-        if self.raw_data:
-            self.open_raw(force_open=True)
-        if self.modular_system:
-            self.open_modular_system(force_open=True)
+        # reset the data
+        self.raw_data = None
+        self.modular_system = None
 
     def save_modular_system(self):
         """Properly save modular system"""
