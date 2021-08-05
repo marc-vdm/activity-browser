@@ -67,19 +67,6 @@ class ModuleDatabaseTable(ABDataFrameView):
         menu.addAction(self.copy_module_action)
         menu.addAction(self.rename_module_action)
 
-        #menu.addAction(
-        #    qicons.delete, "Delete module",
-        #    lambda: mlca_signals.del_module.emit(self.selected_module_name)
-        #)
-        #menu.addAction(
-        #    qicons.copy, "Copy module",
-        #    lambda: mlca_signals.copy_module.emit(self.selected_module_name)
-        #)
-        #menu.addAction(
-        #    qicons.edit, "Rename module",
-        #    lambda: mlca_signals.rename_module.emit(self.selected_module_name)
-        #)
-
         menu.exec_(event.globalPos())
 
     @property
@@ -101,6 +88,10 @@ class GenericModuleTable(ABDataFrameView):
             QtWidgets.QSizePolicy.Maximum
         ))
 
+        self.remove_activity_action = QtWidgets.QAction(
+            qicons.delete, "Remove activity from module", None
+        )
+
     def _connect_signals(self):
         #TODO link these signals
         pass
@@ -113,16 +104,30 @@ class GenericModuleTable(ABDataFrameView):
             lambda: signals.add_activity_to_history.emit(self.selected_activity_key)
         )
 
+        self.remove_activity_action.triggered.connect(self.remove_activity)
+
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
 
-    def contextMenuEvent(self) -> None:
+    def contextMenuEvent(self, event) -> None:
         #TODO add context items
         menu = QtWidgets.QMenu(self)
+        menu.addAction(
+            qicons.right, "Open activity",
+            lambda: signals.open_activity_tab.emit(
+                self.selected_activity_key)
+        )
+        menu.addAction(
+            qicons.graph_explorer, "Open in Graph Explorer",
+            lambda: signals.open_activity_graph_tab.emit(
+                self.selected_activity_key)
+            )
+        menu.addAction(self.remove_activity_action)
+        menu.exec_(event.globalPos())
 
     @property
     def selected_activity_key(self) -> str:
-        """ Return the database name of the user-selected index.
+        """ Return the activity name of the user-selected index.
         """
         return self.model.get_activity_key(self.currentIndex())
 
@@ -131,6 +136,9 @@ class GenericModuleTable(ABDataFrameView):
         self.setSizePolicy(QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
         ))
+
+    def remove_activity(self):
+        raise NotImplementedError("This function is not implemented")
 
     def update_table(self):
         pass
@@ -144,6 +152,11 @@ class ModuleOutputsTable(GenericModuleTable):
         self.model = ModuleOutputsModel(parent=self)
         self._connect_signals()
 
+    def remove_activity(self):
+        activity = self.selected_activity_key
+        print(activity, "should be removed from Outputs")
+        raise NotImplementedError("This function is not implemented")
+
 class ModuleChainTable(GenericModuleTable):
     """ TODO description
     """
@@ -152,6 +165,11 @@ class ModuleChainTable(GenericModuleTable):
 
         self.model = ModuleChainModel(parent=self)
         self._connect_signals()
+
+    def remove_activity(self):
+        activity = self.selected_activity_key
+        print(activity, "should be removed from Chain")
+        raise NotImplementedError("This function is not implemented")
 
 class ModuleCutsTree(ABDictTreeView):
     """ TODO description
@@ -171,17 +189,28 @@ class ModuleCutsTree(ABDictTreeView):
         self.model.updated.connect(self.expandAll)
         self.model.updated.connect(self.update_tree)
 
+        self.remove_activity_action = QtWidgets.QAction(
+            qicons.delete, "Remove activity from module", None
+        )
+        self.remove_activity_action.triggered.connect(self.remove_activity)
+
         self._connect_signals()
 
     def _connect_signals(self):
         super()._connect_signals()
 
-        self.doubleClicked.connect(self.cut_selected)
+        self.doubleClicked.connect(
+            lambda: signals.open_activity_tab.emit(
+                self.selected_activity_key)
+                                   )
 
-    def cut_selected(self):
+    @property
+    def selected_activity_key(self) -> str:
+        """ Return the activity name of the user-selected index.
+        """
         tree_level = self.tree_level()
         if tree_level[0] == 'leaf':
-            signals.open_activity_tab.emit(tree_level[1])
+            return tree_level[1]
 
     def tree_level(self) -> tuple:
         """Return tuple of (tree level, content)."""
@@ -202,9 +231,26 @@ class ModuleCutsTree(ABDictTreeView):
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
         ))
 
-    def contextMenuEvent(self) -> None:
-        #TODO add context items
-        menu = QtWidgets.QMenu(self)
+    def contextMenuEvent(self, event) -> None:
+        if self.selected_activity_key:
+            menu = QtWidgets.QMenu(self)
+            menu.addAction(
+                qicons.right, "Open activity",
+                lambda: signals.open_activity_tab.emit(
+                    self.selected_activity_key)
+            )
+            menu.addAction(
+                qicons.graph_explorer, "Open in Graph Explorer",
+                lambda: signals.open_activity_graph_tab.emit(
+                    self.selected_activity_key)
+            )
+            menu.addAction(self.remove_activity_action)
+            menu.exec_(event.globalPos())
+
+    def remove_activity(self):
+        activity = self.selected_activity_key
+        print(activity, "should be removed from Cuts")
+        raise NotImplementedError("This function is not implemented")
 
     def update_tree(self):
         pass
