@@ -434,6 +434,7 @@ class ModularSystem(object):
                 path_lca_data.append(self.lca_linked_processes(method, path, demand))
             return path_lca_data
 
+
 class ModularSystemDataManager(object):
     """Manages the data of the modular system.
     Data manager takes care of saving data to the right place and opening the right modular systems"""
@@ -467,9 +468,8 @@ class ModularSystemDataManager(object):
 
     def save_modular_system(self):
         """Properly save modular system"""
-        #ms_file = self.modular_system_path(project=self.project_folder)
-        #modular_system = ModularSystem.load_from_file(filepath=ms_file)
-        #ModularSystem.save_to_file(modular_system, filepath=ms_file)
+        print('++ Save is _NOT IMPLEMENTED_ currently')
+        #self.modular_system.save_to_file(self.modular_system_path)
         pass
 
     def open_modular_system(self, path=None, force_open=False):
@@ -529,9 +529,8 @@ class ModularSystemDataManager(object):
         self.raw_data = modular_system.raw_data
 
         # save the updated modular system to disk
-        #TODO
-
         if update:
+            self.save_modular_system()
             mlca_signals.module_db_changed.emit()
 
     def del_module(self, module_name, update=True):
@@ -548,9 +547,8 @@ class ModularSystemDataManager(object):
         self.raw_data = modular_system.raw_data
 
         # save the updated modular system to disk
-        #TODO
-
         if update:
+            self.save_modular_system()
             mlca_signals.module_db_changed.emit()
 
     def copy_module(self, module_name, copy_name=None, update=True):
@@ -595,7 +593,6 @@ class ModularSystemDataManager(object):
         # check if file exists, if not, generate it
         if not os.path.isfile(ms_file):
             ModularSystem().save_to_file(filepath=ms_file)
-
         return ms_file
 
 modular_system_data_manager = ModularSystemDataManager()
