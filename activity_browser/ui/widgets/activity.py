@@ -148,9 +148,12 @@ class ActivityDataGrid(QtWidgets.QWidget):
             if self.parent.key in activities:
                 modules.append(module_name)
 
-                tag = QtWidgets.QPushButton(module_name, self) #TODO add coloring to module buttons
+                tag = QtWidgets.QPushButton(module_name, self)
+                color = msc.get_modular_system.get_modules([module_name])[0].color
+                tag.setStyleSheet("background-color: {}".format(color))
                 tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text())) #TODO add useful action
                 #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
+                #TODO find way to change colors after making module_field
 
                 self.module_field_layout.addWidget(tag)
         self.module_field_layout.addStretch()
