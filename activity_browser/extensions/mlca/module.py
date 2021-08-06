@@ -8,7 +8,7 @@ import uuid
 
 
 class Module(object):
-    """A description of one or several processes from a life cycle inventory database.
+    """A description of one or several modules from a life cycle inventory database.
      It has the following characteristics:
 
     * It produces one or several output products
@@ -19,9 +19,9 @@ class Module(object):
     Args:
         * *name* (``str``): Name of the module
         * *outputs* (``[(key, str, optional float)]``): A list of products produced by the module. Format is ``(key into inventory database, product name, optional amount of product produced)``.
-        * *chain* (``[key]``): A list of inventory processes in the supply chain (not necessarily in order).
+        * *chain* (``[key]``): A list of inventory modules in the supply chain (not necessarily in order).
         * *cuts* (``[(parent_key, child_key, str, float)]``): A set of linkages in the supply chain that should be cut. These will appear as **negative** products (i.e. inputs) in the process-product table. The float amount is determined automatically. Format is (input key, output key, product name, amount).
-        * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory processes.
+        * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory modules.
 
     """
     # TODO: introduce UUID for modules?
@@ -29,7 +29,7 @@ class Module(object):
     # INTERNAL METHODS FOR CONSTRUCTING MODULES
 
     def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, **kwargs):
-        self.key = None  # created when MP saved to a DB
+        self.key = None  # created when module saved to a DB
         self.name = name
         self.cuts = cuts
         self.output_based_scaling = output_based_scaling
@@ -52,7 +52,7 @@ class Module(object):
         for cut in cuts:
             if cut[0] in chain:
                 chain.remove(cut[0])
-                print("MP WARNING: Cut removed from chain: " + str(cut[0]))
+                print("MODULE WARNING: Cut removed from chain: " + str(cut[0]))
 
         return set(chain)
 
@@ -94,10 +94,10 @@ class Module(object):
     def getScalingActivities(self, chain, edges):
         """Which are the scaling activities (at least one)?
 
-        Calculate by filtering for processes which are not used as inputs.
+        Calculate by filtering for modules which are not used as inputs.
 
         Args:
-            * *chain* (set): The supply chain processes
+            * *chain* (set): The supply chain modules
             * *edges* (list): The list of supply chain edges
 
         Returns:
@@ -138,12 +138,12 @@ class Module(object):
         # add outputs that were not specified
         for sa in self.scaling_activities:
             if sa not in [o[0] for o in outputs]:
-                print("MP: Adding an output that was not specified: " + str(sa))
+                print("MODULE: Adding an output that was not specified: " + str(sa))
                 padded_outputs.append((sa, "Unspecified Output", 1.0))
         # remove outputs that were specified, but are *not* outputs
         for o in outputs:
             if o[0] not in self.scaling_activities:
-                print("MP: Removing a specified output that is *not* actually an output: " + str(o[0]))
+                print("MODULE: Removing a specified output that is *not* actually an output: " + str(o[0]))
                 padded_outputs.remove(o)
         return padded_outputs
 
@@ -163,7 +163,7 @@ class Module(object):
         mapping = dict(*[zip(sorted(chain), itertools.count())])
         reverse_mapping = dict(*[zip(itertools.count(), sorted(chain))])
 
-        # MATRIX (that relates to processes in the chain)
+        # MATRIX (that relates to modules in the chain)
         # Diagonal values (usually 1, but there are exceptions)
         M = len(chain)
         matrix = np.zeros((M, M))
@@ -231,16 +231,16 @@ class Module(object):
     # METHODS THAT RETURN MODULE DATA
 
     @property
-    def mp_data(self):
+    def module_data(self):
         """Returns a dictionary of module data as specified in the data format."""
-        mp_data_dict = {
+        module_data_dict = {
             'name': self.name,
             'outputs': self.outputs,
             'chain': list(self.chain),
             'cuts': self.cuts,
             'output_based_scaling': self.output_based_scaling,
         }
-        return mp_data_dict
+        return module_data_dict
 
     def get_product_inputs_and_outputs(self):
         """Returns a list of product inputs and outputs."""
@@ -248,7 +248,7 @@ class Module(object):
 
     @property
     def pp(self):
-        """Property shortcut for returning a list of product intputs and outputs."""
+        """Property shortcut for returning a list of product inputs and outputs."""
         return self.get_product_inputs_and_outputs()
 
     # LCA
@@ -286,7 +286,7 @@ class Module(object):
 
     # SAVE AS REGULAR ACTIVITY
 
-    def save_as_bw2_dataset(self, db_name="MP default", unit=None,
+    def save_as_bw2_dataset(self, db_name="MODULE default", unit=None,
             location=None, categories=[], save_aggregated_inventory=False):
         """Save simplified process to a database.
 
@@ -335,7 +335,7 @@ class Module(object):
                     "input": cut[0],
                     "type": "biosphere" if cut[0] in (u"biosphere", u"biosphere3") else "technosphere",
                 })
-        else:  # save aggregated inventory of all processes in chain
+        else:  # save aggregated inventory of all modules in chain
             exchanges = [{
                 "amount": exc[2],
                 "input": exc[0],
@@ -359,7 +359,7 @@ class Module(object):
         }
 
         # TODO: Include uncertainty from original databases. Can't just scale
-        # uncertainty parameters. Maybe solution is to use "dummy" processes
+        # uncertainty parameters. Maybe solution is to use "dummy" modules
         # like we want to do to separate inputs of same flow in any case.
         # data = db.relabel_data(data, db_name)
         db.write(recursive_str_to_unicode(data))

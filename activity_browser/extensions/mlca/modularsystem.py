@@ -24,17 +24,17 @@ class ModularSystem(object):
     * calculating LCA results for a demand from the linked modular system (possibly for all alternatives)
 
     Modules *cannot* contain:
-(    * 2 processes with the same name)
-    * identical names for products and processes (recommendation is to capitalize process names)
+(    * 2 modules with the same name)
+    * identical names for products and modules (recommendation is to capitalize process names)
 
     Args:
 
-    * *mp_list* (``[module]``): A list of modules
+    * *module_list* (``[module]``): A list of modules
     """
 
-    def __init__(self, mp_list=None):
-        self.mp_list = []
-        self.map_name_mp = dict()
+    def __init__(self, module_list=None):
+        self.module_list = []
+        self.map_name_module = dict()
         self.map_processes_number = dict()
         self.map_products_number = dict()
         self.map_number_processes = dict()
@@ -43,44 +43,44 @@ class ModularSystem(object):
         self.raw_data = []
         self.has_multi_output_processes = False
         self.has_loops = False
-        if mp_list:
-            self.update(mp_list)
+        if module_list:
+            self.update(module_list)
 
-    def update(self, mp_list):
+    def update(self, module_list):
         """
-        Updates the linked modular system every time processes
+        Updates the linked modular system every time modules
         are added, modified, or deleted.
         Errors are thrown in case of:
 
-        * identical names for products and processes
+        * identical names for products and modules
         * identical names of different modules
         * if the input is not of type Module()
         """
         product_names, process_names = set(), set()
-        for mp in mp_list:
-            if not isinstance(mp, Module):
+        for module in module_list:
+            if not isinstance(module, Module):
                 raise ValueError(u"Input must be of Modules type.")
             try:
-                assert mp.name not in process_names  # check if process names are unique
-                process_names.add(mp.name)
-                product_names.update(self.get_product_names([mp]))
+                assert module.name not in process_names  # check if process names are unique
+                process_names.add(module.name)
+                product_names.update(self.get_product_names([module]))
             except AssertionError:
                 raise ValueError(u'Module names must be unique.')
         for product in product_names:
             if product in process_names:
                 raise ValueError(u'Product and Process names cannot be identical.')
-        self.mp_list = mp_list
-        self.map_name_mp = dict([(mp.name, mp) for mp in self.mp_list])
-        self.map_processes_number = dict(zip(self.processes, itertools.count()))
+        self.module_list = module_list
+        self.map_name_module = dict([(module.name, module) for module in self.module_list])
+        self.map_processes_number = dict(zip(self.modules, itertools.count()))
         self.map_products_number = dict(zip(self.products, itertools.count()))
         self.map_number_processes = {v: k for k, v in self.map_processes_number.items()}
         self.map_number_products = {v: k for k, v in self.map_products_number.items()}
         self.update_name_map()
-        self.raw_data = [mp.mp_data for mp in self.mp_list]
+        self.raw_data = [module.module_data for module in self.module_list]
         # multi-output
         self.has_multi_output_processes = False
-        for mp in self.mp_list:
-            if mp.is_multi_output:
+        for module in self.module_list:
+            if module.is_multi_output:
                 self.has_multi_output_processes = True
         # check for loops
         G = nx.DiGraph()
@@ -90,36 +90,36 @@ class ModularSystem(object):
         else:
             self.has_loops = False
 
-        print('\nmodular system with', len(self.products), 'products and', len(self.processes), 'processes.')
-        print('Loops:', self.has_loops, ', Multi-output processes:', self.has_multi_output_processes)
+        print('\nmodular system with', len(self.products), 'products and', len(self.modules), 'modules.')
+        print('Loops:', self.has_loops, ', Multi-output modules:', self.has_multi_output_processes)
 
     def update_name_map(self):
         """
         Updates the name map, which maps product names (outputs or cuts) to activity keys.
         This is used in the Activity Browser to automatically assign a product name to already known activity keys.
         """
-        for mp in self.mp_list:
-            for output in mp.outputs:
+        for module in self.module_list:
+            for output in module.outputs:
                 self.name_map[output[0]] = self.name_map.get(output[0], set())
                 self.name_map[output[0]].add(output[1])
-            for cut in mp.cuts:
+            for cut in module.cuts:
                 self.name_map[cut[0]] = self.name_map.get(cut[0], set())
                 self.name_map[cut[0]].add(cut[2])
 
     # SHORTCUTS
 
     @ property
-    def processes(self):
+    def modules(self):
         """Returns all process names."""
-        return sorted([mp.name for mp in self.mp_list])
+        return sorted([module.name for module in self.module_list])
 
     @ property
     def products(self):
         """Returns all product names."""
         return sorted(set(itertools.chain(*[[x[0] for x in y.pp
-            ] for y in self.mp_list])))
+            ] for y in self.module_list])))
 
-    # DATABASE METHODS (FILE I/O, LMPS MODIFICATION)
+    # DATABASE METHODS (FILE I/O, MODULAR SYSTEM MODIFICATION)
 
     def load_from_file(self, filepath, append=False, raw=False):
         """
@@ -138,150 +138,150 @@ class ModularSystem(object):
                     return raw_data
         except:
             raise IOError(u'Could not load file.')
-        mp_list = [Module(**mp) for mp in raw_data]
+        module_list = [Module(**module) for module in raw_data]
         if append:
-            self.add_mp(mp_list, rename=True)
+            self.add_module(module_list, rename=True)
         else:
-            self.update(mp_list)
+            self.update(module_list)
 
     def save_to_file(self, filepath):
         """Saves data for each module in the modular data format using pickle and updates the linked modular system."""
         with open(filepath, 'wb') as outfile:
             pickle.dump(self.raw_data, outfile)
 
-    def add_mp(self, mp_list, rename=False):
+    def add_module(self, module_list, rename=False):
         """
         Adds modules to the linked modular system.
 
-        *mp_list* can contain module objects or the original data format used to initialize modules.
+        *module_list* can contain module objects or the original data format used to initialize modules.
         """
-        new_mp_list = []
-        for mp in mp_list:
-            if not isinstance(mp, Module):
-                mp = Module(**mp)
-            new_mp_list.append(mp)
+        new_module_list = []
+        for module in module_list:
+            if not isinstance(module, Module):
+                module = Module(**module)
+            new_module_list.append(module)
         if rename:
-            for mp in new_mp_list:
-                if mp.name in self.processes:
-                    mp.name += '__ADDED'
-        self.update(self.mp_list + new_mp_list)
+            for module in new_module_list:
+                if module.name in self.modules:
+                    module.name += '__ADDED'
+        self.update(self.module_list + new_module_list)
 
-    def remove_mp(self, mp_list):
+    def remove_module(self, module_list):
         """
         Remove modules from the linked modular system.
 
-        *mp_list* can be a list of module objects or module names.
+        *module_list* can be a list of module objects or module names.
         """
-        for mp in mp_list:
-            if not isinstance(mp, Module):
-                mp = self.get_processes([mp])
-            self.mp_list.remove(mp[0])
-        self.update(self.mp_list)
+        for module in module_list:
+            if not isinstance(module, Module):
+                module = self.get_modules([module])
+            self.module_list.remove(module[0])
+        self.update(self.module_list)
 
-    # METHODS THAT RETURN DATA FOR A SUBSET OR THE ENTIRE LMPS
+    # METHODS THAT RETURN DATA FOR A SUBSET OR THE ENTIRE MODULAR SYSTEM
 
-    def get_processes(self, mp_list=None):
+    def get_modules(self, module_list=None):
         """
         Returns a list of modules.
 
-        *mp_list* can be a list of module objects or module names.
+        *module_list* can be a list of module objects or module names.
         """
         # if empty list return all modules
-        if not mp_list:
-            return self.mp_list
+        if not module_list:
+            return self.module_list
         else:
             # if name list find corresponding modules
-            if not isinstance(mp_list[0], Module):
-                return [self.map_name_mp.get(name, None) for name in mp_list if name in self.processes]
+            if not isinstance(module_list[0], Module):
+                return [self.map_name_module.get(name, None) for name in module_list if name in self.modules]
             else:
-                return mp_list
+                return module_list
 
-    def get_process_names(self, mp_list=None):
+    def get_module_names(self, module_list=None):
         """Returns a the names of a list of modules."""
-        return sorted([mp.name for mp in self.get_processes(mp_list)])
+        return sorted([module.name for module in self.get_modules(module_list)])
 
-    def get_product_names(self, mp_list=None):
+    def get_product_names(self, module_list=None):
         """Returns the output and input product names of a list of modules.
 
-        *mp_list* can be a list of module objects or module names.
+        *module_list* can be a list of module objects or module names.
         """
         return sorted(set(itertools.chain(*[[x[0] for x in y.pp
-            ] for y in self.get_processes(mp_list)])))
+            ] for y in self.get_modules(module_list)])))
 
-    def get_output_names(self, mp_list=None):
+    def get_output_names(self, module_list=None):
         """ Returns output product names for a list of modules."""
-        return sorted(list(set([name for mp in self.get_processes(mp_list) for name in mp.output_names])))
+        return sorted(list(set([name for module in self.get_modules(module_list) for name in module.output_names])))
 
-    def get_cut_names(self, mp_list=None):
+    def get_cut_names(self, module_list=None):
         """ Returns cut/input product names for a list of modules."""
-        return sorted(list(set([name for mp in self.get_processes(mp_list) for name in mp.cut_names])))
+        return sorted(list(set([name for module in self.get_modules(module_list) for name in module.cut_names])))
 
-    def product_process_dict(self, mp_list=None, process_names=None, product_names=None):
+    def product_module_dict(self, module_list=None, process_names=None, product_names=None):
         """
         Returns a dictionary that maps modules to produced products (key: product, value: module).
-        Optional arguments ``mp_list``, ``process_names``, ``product_names`` can used as filters.
+        Optional arguments ``module_list``, ``process_names``, ``product_names`` can used as filters.
         """
         if not process_names:
-            process_names = self.processes
+            process_names = self.modules
         if not product_names:
             product_names = self.products
         product_processes = {}
-        for mp in self.get_processes(mp_list):
-            for output in mp.outputs:
+        for module in self.get_modules(module_list):
+            for output in module.outputs:
                 output_name = output[1]
-                if output_name in product_names and mp.name in process_names:
+                if output_name in product_names and module.name in process_names:
                     product_processes[output_name] = product_processes.get(output_name, [])
-                    product_processes[output_name].append(mp.name)
+                    product_processes[output_name].append(module.name)
         return product_processes
 
-    def edges(self, mp_list=None):
+    def edges(self, module_list=None):
         """
         Returns an edge list for all edges within the linked modular system.
 
-        *mp_list* can be a list of module objects or module names.
+        *module_list* can be a list of module objects or module names.
         """
         edges = []
-        for mp in self.get_processes(mp_list):
-            for cut in mp.cuts:
-                edges.append((cut[2], mp.name))
-            for output in mp.outputs:
-                edges.append((mp.name, output[1]))
+        for module in self.get_modules(module_list):
+            for cut in module.cuts:
+                edges.append((cut[2], module.name))
+            for output in module.outputs:
+                edges.append((module.name, output[1]))
         return edges
 
-    def get_pp_matrix(self, mp_list=None):
+    def get_pp_matrix(self, module_list=None):
         """
         Returns the product-process matrix as well as two dictionaries
         that hold row/col values for each product/process.
 
-        *mp_list* can be used to limit the scope to the contained processes
+        *module_list* can be used to limit the scope to the contained modules
         """
-        mp_list = self.get_processes(mp_list)
-        matrix = np.zeros((len(self.get_product_names(mp_list)), len(mp_list)))
-        map_processes_number = dict(zip(self.get_process_names(mp_list), itertools.count()))
-        map_products_number = dict(zip(self.get_product_names(mp_list), itertools.count()))
-        for mp in mp_list:
-            for product, amount in mp.pp:
-                matrix[map_products_number[product], map_processes_number[mp.name]] += amount
+        module_list = self.get_modules(module_list)
+        matrix = np.zeros((len(self.get_product_names(module_list)), len(module_list)))
+        map_processes_number = dict(zip(self.get_module_names(module_list), itertools.count()))
+        map_products_number = dict(zip(self.get_product_names(module_list), itertools.count()))
+        for module in module_list:
+            for product, amount in module.pp:
+                matrix[map_products_number[product], map_processes_number[module.name]] += amount
         return matrix, map_processes_number, map_products_number
 
     # ALTERNATIVE PATHWAYS
 
-    def upstream_products_processes(self, product):
-        """Returns all upstream products and processes related to a certain product (functional unit)."""
+    def upstream_products_modules(self, product):
+        """Returns all upstream products and modules related to a certain product (functional unit)."""
         G = nx.DiGraph()
         G.add_edges_from(self.edges())
         product_ancestors = nx.ancestors(G, product)  # set
         product_ancestors.update([product])  # add product (although not an ancestor in a strict sense)
-        # split up into products and processes
-        ancestor_processes = [a for a in product_ancestors if a in self.processes]
+        # split up into products and modules
+        ancestor_processes = [a for a in product_ancestors if a in self.modules]
         ancestor_products = [a for a in product_ancestors if a in self.products]
         return ancestor_processes, ancestor_products
 
     def all_pathways(self, functional_unit):
         """
         Returns all alternative pathways to produce a given functional unit. Data output is a list of lists.
-        Each sublist contains one path made up of products and processes.
-        The input Graph may not contain cycles. It may contain multi-output processes.
+        Each sublist contains one path made up of products and modules.
+        The input Graph may not contain cycles. It may contain multi-output modules.
 
         Args:
 
@@ -292,7 +292,7 @@ class ModularSystem(object):
             if direction_up:
                 visited += [current_node]
             if current_node in self.products:
-                # go up to all processes if none has been visited previously, else go down
+                # go up to all modules if none has been visited previously, else go down
                 upstream_processes = G.predecessors(current_node)
                 if upstream_processes and not [process for process in upstream_processes if process in visited]:
                     parents += [current_node]
@@ -328,18 +328,18 @@ class ModularSystem(object):
 
     # LCA
 
-    def scaling_vector_foreground_demand(self, mp_list, demand):
+    def scaling_vector_foreground_demand(self, module_list, demand):
         """
-        Returns a scaling dictionary for a given demand and matrix defined by a list of processes (or names).
+        Returns a scaling dictionary for a given demand and matrix defined by a list of modules (or names).
         Keys: process names. Values: scaling vector values.
 
         Args:
 
-        * *mp_list*: module objects or names
+        * *module_list*: module objects or names
         * *demand* (dict): keys: product names, values: amount
         """
         # matrix
-        matrix, map_processes, map_products = self.get_pp_matrix(mp_list)
+        matrix, map_processes, map_products = self.get_pp_matrix(module_list)
         try:
             # TODO: define conditions that must be met (e.g. square, single-output); Processes can still have multiple outputs (system expansion)
             assert matrix.shape[0] == matrix.shape[1]  # matrix needs to be square to be invertable!
@@ -360,15 +360,15 @@ class ModularSystem(object):
             #     })
             return scaling_dict  # , foreground_demand
         except AssertionError:
-            print("Product-Process Matrix must be square! Currently", matrix.shape[0], 'products and', matrix.shape[1], 'processes.')
+            print("Product-Process Matrix must be square! Currently", matrix.shape[0], 'products and', matrix.shape[1], 'modules.')
 
-    def lca_processes(self, method, process_names=None, factorize=False):
+    def lca_modules(self, method, process_names=None, factorize=False):
         """Returns a dictionary where *keys* = module name, *value* = LCA score
         """
-        return dict([(mp.name, mp.lca(method, factorize=factorize))
-                     for mp in self.get_processes(process_names)])
+        return dict([(module.name, module.lca(method, factorize=factorize))
+                     for module in self.get_modules(process_names)])
 
-    def lca_linked_processes(self, method, process_names, demand):
+    def lca_linked_modules(self, method, process_names, demand):
         """
         Performs LCA for a given demand from a linked modular system.
         Works only for square matrices (see scaling_vector_foreground_demand).
@@ -386,13 +386,13 @@ class ModularSystem(object):
         Args:
 
         * *method*: LCIA method
-        * *process_names*: selection of processes from the linked modular system (that yields a square matrix)
+        * *process_names*: selection of modules from the linked modular system (that yields a square matrix)
         * *demand* (dict): keys: product names, values: amount
         """
         scaling_dict = self.scaling_vector_foreground_demand(process_names, demand)
         if not scaling_dict:
             return
-        lca_scores = self.lca_processes(method, process_names)
+        lca_scores = self.lca_modules(method, process_names)
         # multiply scaling vector with process LCA scores
         path_lca_score = 0.0
         process_contribution = {}
@@ -417,7 +417,7 @@ class ModularSystem(object):
     def lca_alternatives(self, method, demand):
         """
         Calculation of LCA results for all alternatives in a linked modular system that yield a certain demand.
-        Results are stored in a list of dictionaries as described in 'lca_linked_processes'.
+        Results are stored in a list of dictionaries as described in 'lca_linked_modules'.
 
         Args:
 
@@ -426,12 +426,12 @@ class ModularSystem(object):
         """
         if self.has_multi_output_processes:
             print('\nCannot calculate LCAs for alternatives as system contains ' \
-                  'loops (', self.has_loops, ') / multi-output processes (', self.has_multi_output_processes, ').')
+                  'loops (', self.has_loops, ') / multi-output modules (', self.has_multi_output_processes, ').')
         else:
             # assume that only one product is demanded for now (functional unit)
             path_lca_data = []
             for path in self.all_pathways(demand.keys()[0]):
-                path_lca_data.append(self.lca_linked_processes(method, path, demand))
+                path_lca_data.append(self.lca_linked_modules(method, path, demand))
             return path_lca_data
 
 
@@ -505,8 +505,8 @@ class ModularSystemController(object):
         """Generate a modular system from raw data.
         open raw and this function together do the same as the get_modular_system function."""
         if self.raw_data:
-            mp_list = [Module(**mp) for mp in self.raw_data]
-            self.modular_system = ModularSystem(mp_list=mp_list)
+            module_list = [Module(**module) for module in self.raw_data]
+            self.modular_system = ModularSystem(module_list=module_list)
             return self.modular_system
         else:
             return self.get_modular_system
@@ -520,11 +520,11 @@ class ModularSystemController(object):
             modular_system = self.get_modular_system
 
         # add the new module
-        modular_system.add_mp(mp_list=[{'name': module_name,
+        modular_system.add_module(module_list=[{'name': module_name,
                                         'outputs': outputs,
                                         'chain': chain,
                                         'cuts': cuts
-                                        }])
+                                            }])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 
@@ -542,7 +542,7 @@ class ModularSystemController(object):
             modular_system = self.get_modular_system
 
         # delete the new module
-        modular_system.remove_mp([module_name])
+        modular_system.remove_module([module_name])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 
