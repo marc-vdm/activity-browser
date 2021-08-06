@@ -237,7 +237,7 @@ class MPWidget(QtGui.QWidget):
         self.button_PP_lca_pathways.clicked.connect(self.compare_pathway_lcas)
         self.combo_functional_unit.currentIndexChanged.connect(self.update_FU_unit)
         self.table_PP_comparison.itemSelectionChanged.connect(self.show_path_graph)
-        button_plot_processes.clicked.connect(lambda: self.plot_figure('processes'))
+        button_plot_processes.clicked.connect(lambda: self.plot_figure('modules'))
         button_plot_products.clicked.connect(lambda: self.plot_figure('products'))
 
     # MP DATABASE
@@ -280,14 +280,14 @@ class MPWidget(QtGui.QWidget):
 
     def updateTableMPDatabase(self):
         data = []
-        for mp_data in self.lmp.raw_data:
-            numbers = [len(mp_data['outputs']), len(set(mp_data['chain'])), len(set(mp_data['cuts']))]
+        for module_data in self.lmp.raw_data:
+            numbers = [len(module_data['outputs']), len(set(module_data['chain'])), len(set(module_data['cuts']))]
             data.append({
-                'name': mp_data['name'],
+                'name': module_data['name'],
                 'out/chain/cuts': ", ".join(map(str, numbers)),
-                'outputs': ", ".join([o[1] for o in mp_data['outputs']]),
-                'chain': "//".join([self.MPC.getActivityData(o)['name'] for o in mp_data['chain']]),
-                'cuts': ", ".join(set([o[2] for o in mp_data['cuts']])),
+                'outputs': ", ".join([o[1] for o in module_data['outputs']]),
+                'chain': "//".join([self.MPC.getActivityData(o)['name'] for o in module_data['chain']]),
+                'cuts': ", ".join(set([o[2] for o in module_data['cuts']])),
             })
         keys = ['name', 'out/chain/cuts', 'outputs', 'cuts', 'chain']
         self.table_MP_database = self.helper.update_table(self.table_MP_database, data, keys)
@@ -303,10 +303,10 @@ class MPWidget(QtGui.QWidget):
         self.showGraph()
 
     def addMPtoDatabase(self):
-        if self.MPC.mp_data['chain']:
+        if self.MPC.module_data['chain']:
             add = False
-            mp_name = self.MPC.mp_data['name']
-            if mp_name not in self.lmp.processes:
+            mp_name = self.MPC.module_data['name']
+            if mp_name not in self.lmp.modules:
                 add = True
             else:
                 mgs = "Do you want to overwrite the existing MP?"
@@ -314,22 +314,22 @@ class MPWidget(QtGui.QWidget):
                             mgs, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                 if reply == QtGui.QMessageBox.Yes:
                     add = True
-                    self.lmp.remove_mp([mp_name])  # first remove mp that is to be replaced
+                    self.lmp.remove_module([mp_name])  # first remove mp that is to be replaced
             if add:
-                self.lmp.add_mp([self.MPC.mp_data])
+                self.lmp.add_module([self.MPC.module_data])
                 self.update_MP_database_data()
                 self.signal_status_bar_message.emit("Added MP to working database (not saved).")
 
     # TODO: remove; doesn't seem necessary anymore
     def deleteMPfromDatabase(self):
-        if self.MPC.mp_data['chain']:
-            self.lmp.remove_mp([self.MPC.mp_data['name']])
+        if self.MPC.module_data['chain']:
+            self.lmp.remove_module([self.MPC.module_data['name']])
             self.updateTableMPDatabase()
-            self.signal_status_bar_message.emit(str("Deleted (from working database): " + self.MPC.mp_data['name']))
+            self.signal_status_bar_message.emit(str("Deleted (from working database): " + self.MPC.module_data['name']))
 
     def delete_selected_MP(self):
         processes_to_delete = [str(item.text()) for item in self.table_MP_database.selectedItems()]
-        self.lmp.remove_mp(processes_to_delete)
+        self.lmp.remove_module(processes_to_delete)
         print "Deleted from working MP database:", processes_to_delete
         self.updateTableMPDatabase()
         self.signal_status_bar_message.emit("Deleted selected items.")
@@ -494,7 +494,7 @@ class MPWidget(QtGui.QWidget):
         self.tree_widget_cuts.setEditTriggers(QtGui.QTableWidget.AllEditTriggers)
 
     def update_checkbox_output_based_scaling(self):
-        self.checkbox_output_based_scaling.setChecked(self.MPC.mp_data['output_based_scaling'])
+        self.checkbox_output_based_scaling.setChecked(self.MPC.module_data['output_based_scaling'])
 
     # LMP alternatives and LCA
 
@@ -506,7 +506,7 @@ class MPWidget(QtGui.QWidget):
         if not method:
             self.signal_status_bar_message.emit('Need to define an LCIA method first.')
         else:
-            map_process_lcascore = self.lmp.lca_processes(method, process_names=process_list)
+            map_process_lcascore = self.lmp.lca_modules(method, process_names=process_list)
             data = []
             for name, score in map_process_lcascore.items():
                 data.append({
@@ -521,7 +521,7 @@ class MPWidget(QtGui.QWidget):
         # if self.lmp.has_multi_output_processes or self.lmp.has_loops:
         # if self.lmp.has_loops:
         # self.signal_status_bar_message.emit('Cannot determine pathways as system contains loops ('
-        #     +str(self.lmp.has_loops)+') / multi-output processes ('+str(self.lmp.has_multi_output_processes)+').')
+        #     +str(self.lmp.has_loops)+') / multi-output modules ('+str(self.lmp.has_multi_output_processes)+').')
         # else:
         data = [{'path': p} for p in all_pathways]
         keys = ['path']
@@ -535,19 +535,19 @@ class MPWidget(QtGui.QWidget):
         self.path_data = self.lmp.lca_alternatives(method, demand)
         if not self.path_data:
             self.signal_status_bar_message.emit(
-                'Cannot calculate LCA of alternatives as system contains multi-output processes.')
+                'Cannot calculate LCA of alternatives as system contains multi-output modules.')
         else:
             self.signal_status_bar_message.emit('Calculated LCA for all pathways in {:.2f} seconds.'.format(time.clock()-tic))
             self.path_data = sorted(self.path_data, key=lambda k: k['LCA score'], reverse=True)  # sort by highest score
             self.update_PP_comparison_table(data=self.path_data, keys=['LCA score', 'path'])
             self.plot_figure('products')
 
-    # TODO: filter out products / processes that are not part of the graph
+    # TODO: filter out products / modules that are not part of the graph
     # for a given functional unit so that they are not displayed
     def plot_figure(self, type):
         ''' plot matplotlib figure for LCA alternatives '''
         # get figure data
-        if type == 'processes':
+        if type == 'modules':
             # creates matrix where rows are products and columns hold PROCESS specific impact scores
             data = np.zeros((len(self.lmp.map_processes_number), len(self.path_data)), dtype=np.float)
             for i, l in enumerate(self.path_data):
@@ -561,7 +561,7 @@ class MPWidget(QtGui.QWidget):
             data = np.zeros((len(self.lmp.map_products_number), len(self.path_data)), dtype=np.float)
             for i, l in enumerate(self.path_data):
                 for process, value in l['process contribution'].items():
-                    data[self.lmp.map_products_number[self.lmp.get_output_names([process])[0]], i] = value  # caution, problem for multi-output processes
+                    data[self.lmp.map_products_number[self.lmp.get_output_names([process])[0]], i] = value  # caution, problem for multi-output modules
             # data for labels, colors, ...
             label_product_or_process = [self.lmp.map_number_products[i] for i in np.arange(len(data))]
             colormap = plt.cm.autumn
@@ -771,20 +771,20 @@ class MPWidget(QtGui.QWidget):
         self.signal_MyQTableWidgetItem.emit(self.table_MP_chain.currentItem())
 
     def save_pp_matrix(self):
-        matrix, processes, products = self.lmp.get_pp_matrix()  # self.get_process_products_as_array()
+        matrix, modules, products = self.lmp.get_pp_matrix()  # self.get_process_products_as_array()
 
         print "\nPP-MATRIX:"
         print "PROCESSES:"
-        print processes
+        print modules
         print "PRODUCTS"
         print products
         # print "MATRIX"
         # print matrix
 
         # export pp-matrix data to pickle file
-        # order processes/products by number in dictionary
+        # order modules/products by number in dictionary
         data = {
-            'processes': [x[0] for x in sorted(processes.items(), key=operator.itemgetter(1))],
+            'modules': [x[0] for x in sorted(modules.items(), key=operator.itemgetter(1))],
             'products': [x[0] for x in sorted(products.items(), key=operator.itemgetter(1))],
             'matrix': matrix,
         }
@@ -795,7 +795,7 @@ class MPWidget(QtGui.QWidget):
         try:
             filename = 'pp-matrix.xlsx'
             filepath = os.path.join(os.getcwd(), "MetaProcessDatabases", filename)
-            export_matrix_to_excel(data['products'], data['processes'], data['matrix'], filepath)
+            export_matrix_to_excel(data['products'], data['modules'], data['matrix'], filepath)
         except IOError:
             self.signal_status_bar_message.emit('Could not save to file.')
 
@@ -806,8 +806,8 @@ class MPWidget(QtGui.QWidget):
 
     def export_as_JSON(self):
         outdata = []
-        for mp_data in self.lmp.raw_data:
-            outdata.append(self.MPC.getHumanReadibleMP(mp_data))
+        for module_data in self.lmp.raw_data:
+            outdata.append(self.MPC.getHumanReadibleMP(module_data))
         file_types = "Python (*.py);;JSON (*.json);;All (*.*)"
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '.\MetaProcessDatabases', file_types)
         with open(filename, 'w') as outfile:
