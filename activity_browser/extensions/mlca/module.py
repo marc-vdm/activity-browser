@@ -75,12 +75,7 @@ class Module(object):
                 print('activity does not exist in Brightway:', act_key)
                 return
 
-            exchanges = []
-            for exchange in activity.exchanges():
-                exchange = {'input': exchange['input'], 'type': exchange['type'], 'amount': exchange['amount']}
-                exchanges.append(exchange)
-            chain_exc[act_key] = {'exchanges': exchanges}
-
+            chain_exc[act_key] = {'exchanges': [e for e in activity.exchanges()]}
         return chain_exc
 
     def construct_graph(self, db):
