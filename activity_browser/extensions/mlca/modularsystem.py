@@ -470,7 +470,8 @@ class ModularSystemController(object):
         #self.modular_system.save_to_file(self.modular_system_path)
         pass
 
-    def open_modular_system(self, path=None, force_open=False):
+    @property
+    def get_modular_system(self, path=None, force_open=False):
         """Load modular system from file and return the modular system object."""
         if not path:
             path = self.modular_system_path
@@ -486,7 +487,8 @@ class ModularSystemController(object):
             self.raw_data = self.modular_system.raw_data
             return self.modular_system
 
-    def open_raw(self, path=None, force_open=False):
+    @property
+    def get_raw_data(self, path=None, force_open=False):
         """Load raw modular system data and return the raw data."""
         if not path:
             path = self.modular_system_path
@@ -498,23 +500,24 @@ class ModularSystemController(object):
             self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
             return self.raw_data
 
-    def modular_system_from_raw(self):
+    @property
+    def get_modular_system_from_raw(self):
         """Generate a modular system from raw data.
-        open raw and this function together do the same as the open_modular_system function."""
+        open raw and this function together do the same as the get_modular_system function."""
         if self.raw_data:
             mp_list = [Module(**mp) for mp in self.raw_data]
             self.modular_system = ModularSystem(mp_list=mp_list)
             return self.modular_system
         else:
-            return self.open_modular_system()
+            return self.get_modular_system
 
     def add_module(self, module_name, outputs=[], chain=[], cuts=[], update=True, *args, **kwargs):
         """Add module to modular system."""
         # open the file
         if self.raw_data:
-            modular_system = self.modular_system_from_raw()
+            modular_system = self.get_modular_system_from_raw
         else:
-            modular_system = self.open_modular_system()
+            modular_system = self.get_modular_system
 
         # add the new module
         modular_system.add_mp(mp_list=[{'name': module_name,
@@ -534,9 +537,9 @@ class ModularSystemController(object):
         """Delete module from modular system."""
         # open the file
         if self.raw_data:
-            modular_system = self.modular_system_from_raw()
+            modular_system = self.get_modular_system_from_raw
         else:
-            modular_system = self.open_modular_system()
+            modular_system = self.get_modular_system
 
         # delete the new module
         modular_system.remove_mp([module_name])
@@ -571,9 +574,8 @@ class ModularSystemController(object):
     @property
     def module_names(self):
         module_names = []
-        if self.raw_data:
-            for raw_module in self.raw_data:
-                module_names.append(raw_module['name'])
+        for raw_module in self.get_raw_data:
+            module_names.append(raw_module['name'])
         return module_names
 
     @property
