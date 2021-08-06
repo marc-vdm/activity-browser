@@ -14,6 +14,7 @@ class MlcaSignals(QObject):
     del_module = Signal(str)
     copy_module = Signal(str)
     rename_module = Signal(str)
+    module_renamed = Signal(tuple)
     module_db_changed = Signal()
     module_selected = Signal(str)
 

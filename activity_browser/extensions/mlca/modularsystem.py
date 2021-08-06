@@ -45,6 +45,7 @@ class ModularSystem(object):
         self.has_loops = False
         if module_list:
             self.update(module_list)
+            self.affected_activities
 
     def update(self, module_list):
         """
@@ -118,6 +119,15 @@ class ModularSystem(object):
         """Returns all product names."""
         return sorted(set(itertools.chain(*[[x[0] for x in y.pp
             ] for y in self.module_list])))
+
+    @property
+    def affected_activities(self):
+        """Dict of all affected modules by module."""
+        aa = {}
+        for module in self.raw_data:
+            activities = set(activity for activity in module['chain'])
+            aa[module['name']] = list(activities)
+        return aa
 
     # DATABASE METHODS (FILE I/O, MODULAR SYSTEM MODIFICATION)
 
@@ -570,6 +580,7 @@ class ModularSystemController(object):
         In reality this function just copies and deletes the module."""
         self.copy_module(old_module_name, new_module_name, update=update)
         self.del_module(old_module_name)
+        mlca_signals.module_renamed.emit(old_module_name, new_module_name)
 
     @property
     def module_names(self):
