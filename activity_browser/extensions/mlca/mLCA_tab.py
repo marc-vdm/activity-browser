@@ -311,6 +311,10 @@ class ModuleWidget(QtWidgets.QWidget):
         self.name_layout.addWidget(QtWidgets.QLabel('Name:'))
         self.module_name_field = QtWidgets.QLineEdit()
         self.name_layout.addWidget(self.module_name_field)
+        self.name_layout.addWidget(QtWidgets.QLabel('Color:'))
+        self.module_color_editor = QtWidgets.QPushButton('placeholder')
+        self.module_color_editor.setStyleSheet("background-color: white")
+        self.name_layout.addWidget(self.module_color_editor)
         self.name_widget.setLayout(self.name_layout)
 
         # output widget
@@ -328,6 +332,7 @@ class ModuleWidget(QtWidgets.QWidget):
         mlca_signals.rename_module.connect(self.reset_widget)
         mlca_signals.module_selected.connect(self.update_widget)
         self.module_name_field.editingFinished.connect(self.module_name_change)
+        self.module_color_editor.clicked.connect(self.change_module_color)
         #self.output_scaling_checkbox.toggled.connect()
 
     def construct_layout(self):
@@ -355,7 +360,12 @@ class ModuleWidget(QtWidgets.QWidget):
         #mlca_signals.rename_module.emit((self.current_module, self.module_name_field.text))
         msc.rename_module(self.current_module, self.module_name_field.text())
 
+    def change_module_color(self):
+        print('module color changer goes here')
+
     def update_widget(self, module_name=''):
         self.current_module = module_name
         self.module_name_field.setText(module_name)
+        color = msc.get_modular_system.get_modules([module_name])[0].color
+        self.module_color_editor.setStyleSheet("background-color: {}".format(color))
         self.show()

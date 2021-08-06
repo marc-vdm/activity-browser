@@ -28,7 +28,7 @@ class Module(object):
 
     # INTERNAL METHODS FOR CONSTRUCTING MODULES
 
-    def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, **kwargs):
+    def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, color='white', **kwargs):
         self.key = None  # created when module saved to a DB
         self.name = name
         self.cuts = cuts
@@ -42,6 +42,7 @@ class Module(object):
             self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
         self.get_edge_lists()
         self.pad_cuts()
+        self.color = color
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
         self.cut_names = [c[2] for c in self.cuts]
