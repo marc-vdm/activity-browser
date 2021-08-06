@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
+from peewee import DoesNotExist
 from bw2data.utils import recursive_str_to_unicode
-from activity_browser.bwutils import AB_metadata
 import itertools
 import numpy as np
 import uuid
@@ -34,8 +34,7 @@ class Module(object):
         self.cuts = cuts
         self.output_based_scaling = output_based_scaling
         self.chain = self.remove_cuts_from_chain(chain, self.cuts)
-        self.depending_databases = list(set(c[0] for c in self.chain))
-        self.filtered_database = self.getFilteredDatabase(self.depending_databases, self.chain)
+        self.filtered_database = self.getFilteredDatabase(self.chain)
         self.edges = self.construct_graph(self.filtered_database)
         self.scaling_activities, self.isSimple = self.getScalingActivities(self.chain, self.edges)
         self.outputs = self.pad_outputs(outputs)
@@ -57,7 +56,7 @@ class Module(object):
 
         return set(chain)
 
-    def getFilteredDatabase(self, depending_databases, chain):
+    def getFilteredDatabase(self, chain):
         """Extract the supply chain for this process from larger database.
 
         Args:
@@ -68,13 +67,21 @@ class Module(object):
             A filtered database, in the same dict format
 
         """
-        output = {}
-        for name in depending_databases:
-            db = AB_metadata.get_database_metadata(name)
-            output.update(
-                dict([(k, v) for k, v in db.items() if k in chain])
-            )
-        return output
+        chain_exc = {}
+        for act_key in chain:
+            try:
+                activity = bw.get_activity(act_key)
+            except DoesNotExist:
+                print('activity does not exist in Brightway:', act_key)
+                return
+
+            exchanges = []
+            for exchange in activity.exchanges():
+                exchange = {'input': exchange['input'], 'type': exchange['type'], 'amount': exchange['amount']}
+                exchanges.append(exchange)
+            chain_exc[act_key] = {'exchanges': exchanges}
+
+        return chain_exc
 
     def construct_graph(self, db):
         """Construct a list of edges (excluding self links, e.g. an electricity input to electricity production).

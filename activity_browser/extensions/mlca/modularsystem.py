@@ -482,9 +482,8 @@ class ModularSystemController(object):
             modular_system = ModularSystem()
             modular_system.load_from_file(filepath=path)
             self.modular_system = modular_system
-            # load raw data too when we're loading the full system
-            if not self.raw_data:
-                self.raw_data = self.modular_system.raw_data
+            # load raw data too
+            self.raw_data = self.modular_system.raw_data
             return self.modular_system
 
     def open_raw(self, path=None, force_open=False):
