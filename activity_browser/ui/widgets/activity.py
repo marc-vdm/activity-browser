@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import partial
 
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2.QtWidgets import QMessageBox
 
 from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
@@ -100,11 +100,8 @@ class ActivityDataGrid(QtWidgets.QWidget):
         # module field
         self.module_field = QtWidgets.QWidget()
         self.module_field_layout = QtWidgets.QHBoxLayout()
-        self.assemble_module_field() #TODO link modules here somehow
+        self.assemble_module_field()
         self.module_field.setLayout(self.module_field_layout)
-
-        #self.module_field = QtWidgets.QPushButton('Placeholder')
-        #self.module_field.clicked.connect(self.mod)
         self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
 
         # arrange widgets for display as a grid
@@ -140,29 +137,52 @@ class ActivityDataGrid(QtWidgets.QWidget):
         items = ['', 'Add to new Module'] + items
         self.module_combo.addItems(items)
 
-    def assemble_module_field(self):
-        """ Build the module field with one button/tag per module"""
+    def generate_module_tag(self, module_name):
+        tag = QtWidgets.QPushButton(module_name, self)
+        color = msc.get_modular_system.get_modules([module_name])[0].color
+        tag.setStyleSheet("background-color: {}".format(color))
+        tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text()))
+        #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
+        #TODO find way to change colors after making module_field
+        self.module_field_layout.addWidget(tag)
 
-        modules = []
+    def assemble_module_field(self):
         for module_name, activities in msc.get_modular_system.affected_activities.items():
             if self.parent.key in activities:
-                modules.append(module_name)
+                self.generate_module_tag(module_name)
 
-                tag = QtWidgets.QPushButton(module_name, self)
-                color = msc.get_modular_system.get_modules([module_name])[0].color
-                tag.setStyleSheet("background-color: {}".format(color))
-                tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text())) #TODO add useful action
-                #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
-                #TODO find way to change colors after making module_field
+    def update_module_field(self):
+        mf = self.module_field_layout
+        current_active_modules = {mf.itemAt(i).widget().text(): i for i in range(mf.count())}
 
-                self.module_field_layout.addWidget(tag)
-        self.module_field_layout.addStretch()
+        for module_name in current_active_modules.keys():
+            widget = self.module_field_layout.itemAt(current_active_modules[module_name]).widget()
+
+            # remove modules that are do not contain activity anymore
+            if module_name not in msc.module_names or \
+                    self.parent.key not in msc.get_modular_system.affected_activities[module_name]:
+                # either module does not exist anymore or activity not in module anymore
+                self.module_field_layout.removeWidget(widget)
+                widget.deleteLater()
+
+            # re-write tag-color
+            color = msc.get_modular_system.get_modules([module_name])[0].color
+            widget.setStyleSheet("background-color: {}".format(color))
+
+        # add new modules if there are any
+        for module_name, activities in msc.get_modular_system.affected_activities.items():
+            if module_name not in current_active_modules and \
+                    self.parent.key in activities:
+                # add module tag if not present already and valid to activity
+                self.generate_module_tag(module_name)
+
 
     def module_field_tag_clicked(self, tag_name=None):
         mlca_signals.module_selected.emit(tag_name)
 
     def connect_signals(self):
         signals.edit_activity.connect(self.update_location_combo)
+        mlca_signals.module_db_changed.connect(self.update_module_field)
 
     def populate(self):
         # fill in the values of the ActivityDataGrid widgets

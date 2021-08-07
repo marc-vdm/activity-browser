@@ -240,6 +240,7 @@ class Module(object):
             'chain': list(self.chain),
             'cuts': self.cuts,
             'output_based_scaling': self.output_based_scaling,
+            'color': self.color,
         }
         return module_data_dict
 

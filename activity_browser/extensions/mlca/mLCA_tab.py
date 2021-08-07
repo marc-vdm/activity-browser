@@ -356,8 +356,6 @@ class ModuleWidget(QtWidgets.QWidget):
             self.current_module = None
 
     def module_name_change(self):
-        #print('module name change', self.module_name_field.text())
-        #mlca_signals.rename_module.emit((self.current_module, self.module_name_field.text))
         msc.rename_module(self.current_module, self.module_name_field.text())
 
     def change_module_color(self):
