@@ -458,6 +458,7 @@ class ModularSystemController(object):
 
         self.modular_system = None
         self.raw_data = None
+        self.related_activities = None
 
         self.modular_system_path
         self.module_names
@@ -467,6 +468,7 @@ class ModularSystemController(object):
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
         mlca_signals.copy_module.connect(self.copy_module)
+        mlca_signals.module_db_changed.connect(self.get_related_activities)
 
     def project_change(self):
         """Get project's new modular system location"""
@@ -498,6 +500,7 @@ class ModularSystemController(object):
             self.modular_system = modular_system
             # load raw data too
             self.raw_data = self.modular_system.raw_data
+            self.get_related_activities()
             return self.modular_system
 
     @property
@@ -592,6 +595,22 @@ class ModularSystemController(object):
         self.get_modular_system.get_module(module_name).color = color
         self.update_modular_system()
         mlca_signals.module_color_set.emit(module_name)
+
+    def get_related_activities(self):
+        keys = {}
+        for module in self.get_modular_system.get_modules():
+            for act_key in module.chain:
+                activity = bw.get_activity(act_key)
+                for exchange in activity.exchanges():
+                    exch_key = exchange['input']
+                    if keys.get(exch_key, False) and (module.name, 'chain') not in keys[exch_key] :
+                        keys[exch_key].append((module.name, 'chain'))
+                    else:
+                        if exch_key not in self.modular_system.affected_activities[module.name]:
+                            keys[exch_key] = [(module.name, 'chain')]
+
+        self.related_activities = keys
+        return keys
 
     @property
     def module_names(self):
