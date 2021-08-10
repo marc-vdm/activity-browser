@@ -170,7 +170,10 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
             # re-write tag-color
             color = msc.get_modular_system.get_modules([module_name])[0].color
-            widget.setStyleSheet("background-color: {}".format(color))
+            stylesheet = "background-color: {};" \
+                         "border-radius: 15px;" \
+                         "border: 1px solid black".format(color)
+            widget.setStyleSheet(stylesheet)
 
         # add new modules if there are any
         for module_name, activities in msc.get_modular_system.affected_activities.items():

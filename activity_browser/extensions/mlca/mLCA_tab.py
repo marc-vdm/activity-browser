@@ -109,7 +109,7 @@ class mLCATab(QtWidgets.QWidget):
                 )
 
     def change_color_module_dialog(self, module_name):
-        """Dialog to rename a module in the modular system"""
+        """Dialog to change the color of a module in the modular system"""
         #TODO make this a proper color chooser
         color, ok = QtWidgets.QInputDialog.getText(
             self.window,
@@ -118,8 +118,7 @@ class mLCATab(QtWidgets.QWidget):
         )
 
         if ok and color:
-            msc.get_modular_system.get_modules([module_name])[0].color = color
-            mlca_signals.module_color_set.emit(module_name)
+            msc.set_module_color(module_name, color)
 
 class ModularDatabasesWidget(QtWidgets.QWidget):
     def __init__(self):
@@ -325,9 +324,9 @@ class ModuleWidget(QtWidgets.QWidget):
         self.name_layout.addWidget(QtWidgets.QLabel('Name:'))
         self.module_name_field = QtWidgets.QLineEdit()
         self.name_layout.addWidget(self.module_name_field)
-        self.name_layout.addWidget(QtWidgets.QLabel('Color:'))
-        self.module_color_editor = QtWidgets.QPushButton('placeholder')
+        self.module_color_editor = QtWidgets.QPushButton('Color')
         self.module_color_editor.setStyleSheet("background-color: white")
+        self.module_color_editor.setToolTip('Change the color of the module')
         self.name_layout.addWidget(self.module_color_editor)
         self.name_widget.setLayout(self.name_layout)
 
@@ -371,10 +370,13 @@ class ModuleWidget(QtWidgets.QWidget):
             self.current_module = None
 
     def module_name_change(self):
-        msc.rename_module(self.current_module, self.module_name_field.text())
+        name = self.module_name_field.text()
+        if name not in msc.module_names:
+            msc.rename_module(self.current_module, name)
+        else:
+            print("Not possible", "A module with this name already exists.")
 
     def change_module_color(self):
-        #print('module color changer goes here')
         mlca_signals.module_set_color.emit(self.module_name_field.text())
 
     def update_widget(self, module_name=''):
