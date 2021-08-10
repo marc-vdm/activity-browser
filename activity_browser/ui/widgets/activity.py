@@ -139,6 +139,12 @@ class ActivityDataGrid(QtWidgets.QWidget):
     def populate_module_combo(self, items=[]):
         if len(items) == 0: #TODO replace with actual list of relevant modules
             items = ['example']
+        items = []
+        if msc.related_activities.get(self.parent.key, False):
+            modules = msc.related_activities[self.parent.key]
+            for module in modules:
+                print(module)
+                items.append(module[0])
 
         items = ['', 'Add to new Module'] + items
         self.module_combo.addItems(items)
