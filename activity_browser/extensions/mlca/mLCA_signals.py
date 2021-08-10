@@ -17,5 +17,7 @@ class MlcaSignals(QObject):
     module_renamed = Signal(tuple)
     module_db_changed = Signal()
     module_selected = Signal(str)
+    module_set_color = Signal(str)
+    module_color_set = Signal(str)
 
 mlca_signals = MlcaSignals()

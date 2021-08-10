@@ -48,6 +48,7 @@ class mLCATab(QtWidgets.QWidget):
 
         mlca_signals.new_module.connect(self.new_module_dialog)
         mlca_signals.rename_module.connect(self.rename_module_dialog)
+        mlca_signals.module_set_color.connect(self.change_color_module_dialog)
 
     def change_project(self):
         pass
@@ -106,6 +107,19 @@ class mLCATab(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.information(
                     self.window, "Not possible", "A module with this name already exists."
                 )
+
+    def change_color_module_dialog(self, module_name):
+        """Dialog to rename a module in the modular system"""
+        #TODO make this a proper color chooser
+        color, ok = QtWidgets.QInputDialog.getText(
+            self.window,
+            "Color module '{}'".format(module_name),
+            "New color of module:" + " " * 25
+        )
+
+        if ok and color:
+            msc.get_modular_system.get_modules([module_name])[0].color = color
+            mlca_signals.module_color_set.emit(module_name)
 
 class ModularDatabasesWidget(QtWidgets.QWidget):
     def __init__(self):
@@ -331,6 +345,7 @@ class ModuleWidget(QtWidgets.QWidget):
         mlca_signals.del_module.connect(self.reset_widget)
         mlca_signals.rename_module.connect(self.reset_widget)
         mlca_signals.module_selected.connect(self.update_widget)
+        mlca_signals.module_color_set.connect(self.update_widget)
         self.module_name_field.editingFinished.connect(self.module_name_change)
         self.module_color_editor.clicked.connect(self.change_module_color)
         #self.output_scaling_checkbox.toggled.connect()
@@ -359,7 +374,8 @@ class ModuleWidget(QtWidgets.QWidget):
         msc.rename_module(self.current_module, self.module_name_field.text())
 
     def change_module_color(self):
-        print('module color changer goes here')
+        #print('module color changer goes here')
+        mlca_signals.module_set_color.emit(self.module_name_field.text())
 
     def update_widget(self, module_name=''):
         self.current_module = module_name

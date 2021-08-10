@@ -140,7 +140,10 @@ class ActivityDataGrid(QtWidgets.QWidget):
     def generate_module_tag(self, module_name):
         tag = QtWidgets.QPushButton(module_name, self)
         color = msc.get_modular_system.get_modules([module_name])[0].color
-        tag.setStyleSheet("background-color: {}".format(color))
+        stylesheet = "background-color: {};" \
+                     "border-radius: 15px;" \
+                     "border: 1px solid black".format(color)
+        tag.setStyleSheet(stylesheet)
         tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text()))
         #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
         #TODO find way to change colors after making module_field
@@ -183,6 +186,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
     def connect_signals(self):
         signals.edit_activity.connect(self.update_location_combo)
         mlca_signals.module_db_changed.connect(self.update_module_field)
+        mlca_signals.module_color_set.connect(self.update_module_field)
 
     def populate(self):
         # fill in the values of the ActivityDataGrid widgets
