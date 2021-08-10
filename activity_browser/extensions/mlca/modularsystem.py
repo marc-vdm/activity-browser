@@ -521,7 +521,7 @@ class ModularSystemController(object):
         else:
             return self.get_modular_system
 
-    def add_module(self, module_name, outputs=[], chain=[], cuts=[], update=True, *args, **kwargs):
+    def add_module(self, module_name, outputs=[], chain=[], cuts=[], *args, **kwargs):
         """Add module to modular system."""
         # open the file
         if self.raw_data:
@@ -539,11 +539,10 @@ class ModularSystemController(object):
         self.raw_data = modular_system.raw_data
 
         # save the updated modular system to disk
-        if update:
-            self.save_modular_system()
-            mlca_signals.module_db_changed.emit()
+        self.save_modular_system()
+        mlca_signals.module_db_changed.emit()
 
-    def del_module(self, module_name, update=True):
+    def del_module(self, module_name):
         """Delete module from modular system."""
         # open the file
         if self.raw_data:
@@ -557,11 +556,10 @@ class ModularSystemController(object):
         self.raw_data = modular_system.raw_data
 
         # save the updated modular system to disk
-        if update:
-            self.save_modular_system()
-            mlca_signals.module_db_changed.emit()
+        self.save_modular_system()
+        mlca_signals.module_db_changed.emit()
 
-    def copy_module(self, module_name, copy_name=None, update=True):
+    def copy_module(self, module_name, copy_name=None):
         """Copy module in modular system, copy name is 'original_COPY'."""
         # get data to copy
         for raw_module in self.raw_data:
@@ -572,22 +570,34 @@ class ModularSystemController(object):
             module['module_name'] = module['name'] + '_COPY'
         else:
             module['module_name'] = copy_name
-        self.add_module(**module, update=update)
+        self.add_module(**module)
 
-    def rename_module(self, old_module_name, new_module_name, update=False):
-        """Rename module in modular system.
+    def update_modular_system(self):
+        self.modular_system.update(self.modular_system.get_modules())
+        # update the raw data
+        self.raw_data = self.modular_system.raw_data
+        self.save_modular_system()
+        mlca_signals.module_db_changed.emit()
 
-        In reality this function just copies and deletes the module."""
-        self.copy_module(old_module_name, new_module_name, update=update)
-        self.del_module(old_module_name)
-        mlca_signals.module_renamed.emit(old_module_name, new_module_name)
+    def rename_module(self, old_module_name, new_module_name):
+        """Rename module in modular system."""
+        self.get_modular_system.get_modules([old_module_name])[0].name = new_module_name
+        self.update_modular_system()
+
+    def set_module_color(self, module_name, color):
+        """Change color of module in modular system."""
+        self.get_modular_system.get_modules([module_name])[0].color = color
+        self.update_modular_system()
 
     @property
     def module_names(self):
-        module_names = []
-        for raw_module in self.get_raw_data:
-            module_names.append(raw_module['name'])
-        return module_names
+        if self.modular_system:
+            return self.modular_system.modules
+        else:
+            module_names = []
+            for raw_module in self.get_raw_data:
+                module_names.append(raw_module['name'])
+            return module_names
 
     @property
     def modular_system_path(self):
