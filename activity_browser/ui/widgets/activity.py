@@ -130,12 +130,28 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.set_activity_fields_read_only()
         self.connect_signals()
 
+    def connect_signals(self):
+        signals.edit_activity.connect(self.update_location_combo)
+        mlca_signals.module_db_changed.connect(self.update_module_field)
+        mlca_signals.module_color_set.connect(self.update_module_field)
+        self.module_combo.activated.connect(self.module_combo_selected)
+
     def populate_module_combo(self, items=[]):
         if len(items) == 0: #TODO replace with actual list of relevant modules
             items = ['example']
 
         items = ['', 'Add to new Module'] + items
         self.module_combo.addItems(items)
+
+    def module_combo_selected(self):
+        option = self.module_combo.currentText()
+        if option == '':
+            return
+        elif option == 'Add to new Module':
+            mlca_signals.new_module_from_act.emit(self.parent.key)
+        else:
+            pass
+        self.module_combo.setCurrentIndex(0)
 
     def generate_module_tag(self, module_name):
         tag = QtWidgets.QPushButton(module_name, self)
@@ -185,11 +201,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
     def module_field_tag_clicked(self, tag_name=None):
         mlca_signals.module_selected.emit(tag_name)
         signals.show_tab.emit("mLCA")
-
-    def connect_signals(self):
-        signals.edit_activity.connect(self.update_location_combo)
-        mlca_signals.module_db_changed.connect(self.update_module_field)
-        mlca_signals.module_color_set.connect(self.update_module_field)
 
     def populate(self):
         # fill in the values of the ActivityDataGrid widgets

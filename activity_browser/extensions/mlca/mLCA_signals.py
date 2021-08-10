@@ -11,6 +11,7 @@ class MlcaSignals(QObject):
 
     # modules
     new_module = Signal()
+    new_module_from_act = Signal(tuple)
     del_module = Signal(str)
     copy_module = Signal(str)
     rename_module = Signal(str)
