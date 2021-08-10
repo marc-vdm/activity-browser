@@ -44,9 +44,8 @@ class mLCATab(QtWidgets.QWidget):
         self.connect_signals()
 
     def connect_signals(self):
-        pass
-
         mlca_signals.new_module.connect(self.new_module_dialog)
+        mlca_signals.new_module_from_act.connect(self.new_module_from_activity_dialog)
         mlca_signals.del_module.connect(self.del_module_dialog)
         mlca_signals.rename_module.connect(self.rename_module_dialog)
         mlca_signals.module_set_color.connect(self.change_color_module_dialog)
@@ -87,6 +86,23 @@ class mLCATab(QtWidgets.QWidget):
         if ok and name:
             if name not in msc.module_names:
                 msc.add_module(name)
+                mlca_signals.module_selected.emit(name)
+            else:
+                QtWidgets.QMessageBox.information(
+                    self.window, "Not possible", "A module with this name already exists."
+                )
+
+    def new_module_from_activity_dialog(self, activity):
+        """Dialog to add a new module to the modular system"""
+        name, ok = QtWidgets.QInputDialog.getText(
+            self.window,
+            "Create new module",
+            "Name of new module:" + " " * 25,
+        )
+
+        if ok and name:
+            if name not in msc.module_names:
+                msc.add_module(name, chain=[activity])
                 mlca_signals.module_selected.emit(name)
             else:
                 QtWidgets.QMessageBox.information(
