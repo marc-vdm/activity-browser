@@ -47,6 +47,7 @@ class mLCATab(QtWidgets.QWidget):
         pass
 
         mlca_signals.new_module.connect(self.new_module_dialog)
+        mlca_signals.del_module.connect(self.del_module_dialog)
         mlca_signals.rename_module.connect(self.rename_module_dialog)
         mlca_signals.module_set_color.connect(self.change_color_module_dialog)
 
@@ -91,6 +92,18 @@ class mLCATab(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.information(
                     self.window, "Not possible", "A module with this name already exists."
                 )
+
+    def del_module_dialog(self, module_name):
+        """Dialog to add a new module to the modular system"""
+        ok = QtWidgets.QMessageBox.question(
+            self.window,
+            "Delete module?",
+            ("Are you sure you want to delete module '{}'? This action cannot be undone").format(
+                module_name)
+        )
+
+        if ok == QtWidgets.QMessageBox.Yes:
+            msc.del_module(module_name)
 
     def rename_module_dialog(self, module_name):
         """Dialog to rename a module in the modular system"""

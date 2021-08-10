@@ -466,7 +466,6 @@ class ModularSystemController(object):
 
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
-        mlca_signals.del_module.connect(self.del_module)
         mlca_signals.copy_module.connect(self.copy_module)
 
     def project_change(self):

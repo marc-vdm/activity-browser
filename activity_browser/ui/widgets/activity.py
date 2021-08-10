@@ -184,6 +184,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
     def module_field_tag_clicked(self, tag_name=None):
         mlca_signals.module_selected.emit(tag_name)
+        signals.show_tab.emit("mLCA")
 
     def connect_signals(self):
         signals.edit_activity.connect(self.update_location_combo)
