@@ -182,7 +182,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
                 # add module tag if not present already and valid to activity
                 self.generate_module_tag(module_name)
 
-
     def module_field_tag_clicked(self, tag_name=None):
         mlca_signals.module_selected.emit(tag_name)
 

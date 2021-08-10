@@ -190,6 +190,10 @@ class ModularSystem(object):
 
     # METHODS THAT RETURN DATA FOR A SUBSET OR THE ENTIRE MODULAR SYSTEM
 
+    def get_module(self, module_name):
+        if module_name in self.modules:
+            return self.map_name_module.get(module_name, None)
+
     def get_modules(self, module_list=None):
         """
         Returns a list of modules.
@@ -581,13 +585,14 @@ class ModularSystemController(object):
 
     def rename_module(self, old_module_name, new_module_name):
         """Rename module in modular system."""
-        self.get_modular_system.get_modules([old_module_name])[0].name = new_module_name
+        self.get_modular_system.get_module(old_module_name).name = new_module_name
         self.update_modular_system()
 
     def set_module_color(self, module_name, color):
         """Change color of module in modular system."""
-        self.get_modular_system.get_modules([module_name])[0].color = color
+        self.get_modular_system.get_module(module_name).color = color
         self.update_modular_system()
+        mlca_signals.module_color_set.emit(module_name)
 
     @property
     def module_names(self):
