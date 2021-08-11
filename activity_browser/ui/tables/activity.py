@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
 
@@ -10,6 +12,9 @@ from .models import (
 from .views import ABDataFrameView
 from ..icons import qicons
 from ...signals import signals
+
+from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
+from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
 
 class BaseExchangeTable(ABDataFrameView):
@@ -158,7 +163,45 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         menu.addAction(self.delete_exchange_action)
         menu.addAction(self.remove_formula_action)
         menu.addAction(self.remove_uncertainty_action)
+
+        items = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(items) > 0:
+            if len(items) > 1:
+                sub_menu = menu.addMenu(qicons.add, "Add activity to module")
+            else:
+                sub_menu = menu
+            # TODO fix only 1 item shown in menu when len(items) > 1
+            for item in items:
+                module_action = QtWidgets.QAction(
+                    qicons.add, "Add activity to '{}'".format(item), None
+                )
+                sub_menu.addAction(module_action)
+                module_action.triggered.connect(partial(self.module_context_handler, item))
+
         menu.exec_(a0.globalPos())
+
+    def generate_module_items(self, key):
+        items = []
+        if msc.related_activities and msc.related_activities.get(key, False):
+            modules = msc.related_activities[key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if key not in msc.affected_activities[module[0]] and module[0] not in items:
+                    items.append(module[0])
+        return items
+
+    def module_context_handler(self, item_name):
+        """Decide what happens based on which context menu option was clicked"""
+        key = self.model.get_key(self.currentIndex())
+
+        modules = msc.related_activities[key]
+        for module in modules:
+            if module[0] == item_name:
+                break
+        if module[1] == 'output':
+            mlca_signals.replace_output.emit((module[0], key))
+        elif module[1] == 'chain':
+            mlca_signals.add_to_chain.emit((module[0], key))
 
     def dragEnterEvent(self, event):
         """ Accept exchanges from a technosphere database table, and the
@@ -226,4 +269,42 @@ class DownstreamExchangeTable(BaseExchangeTable):
     def contextMenuEvent(self, a0) -> None:
         menu = QtWidgets.QMenu()
         menu.addAction(qicons.right, "Open activities", self.open_activities)
+
+        items = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(items) > 0:
+            if len(items) > 1:
+                sub_menu = menu.addMenu(qicons.add, "Add activity to module")
+            else:
+                sub_menu = menu
+            # TODO fix only 1 item shown in menu when len(items) > 1
+            for item in items:
+                module_action = QtWidgets.QAction(
+                    qicons.add, "Add activity to '{}'".format(item), None
+                )
+                sub_menu.addAction(module_action)
+                module_action.triggered.connect(partial(self.module_context_handler, item))
+
         menu.exec_(a0.globalPos())
+
+    def generate_module_items(self, key):
+        items = []
+        if msc.related_activities and msc.related_activities.get(key, False):
+            modules = msc.related_activities[key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if key not in msc.affected_activities[module[0]] and module[0] not in items:
+                    items.append(module[0])
+        return items
+
+    def module_context_handler(self, item_name):
+        """Decide what happens based on which context menu option was clicked"""
+        key = self.model.get_key(self.currentIndex())
+
+        modules = msc.related_activities[key]
+        for module in modules:
+            if module[0] == item_name:
+                break
+        if module[1] == 'output':
+            mlca_signals.replace_output.emit((module[0], key))
+        elif module[1] == 'chain':
+            mlca_signals.add_to_chain.emit((module[0], key))
