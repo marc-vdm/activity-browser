@@ -158,12 +158,18 @@ class ModuleCutsModel(BaseTreeModel):
         self.key_col = 0
         self.cut_col = 0
         self.cut_products = []
+        self.module_name = None
 
         self.setup_model_data()
         self.connect_signals()
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
+        mlca_signals.module_changed.connect(self.optional_sync)
+
+    def optional_sync(self, module_name):
+        if module_name == self.module_name:
+            self.sync(module_name)
 
     def setup_model_data(self) -> None:
         """Construct a nested dict of the self._dataframe.
@@ -181,6 +187,7 @@ class ModuleCutsModel(BaseTreeModel):
                 ModuleCutsItem.build_item(row.to_list(), prod_branch)
 
     def sync(self, module_name: str) -> None:
+        self.module_name = module_name
         # clear tree
         self.beginResetModel()
         self.root.clear()

@@ -23,6 +23,11 @@ class MlcaSignals(QObject):
     module_set_color = Signal(str)
     module_color_set = Signal(str)
     add_to_chain = Signal(tuple)
+    remove_from_chain = Signal(tuple)
+    add_to_cut = Signal(tuple)
+    remove_from_cut = Signal(tuple)
+    add_to_output = Signal(tuple)
+    remove_from_output = Signal(tuple)
     replace_output = Signal(tuple)
 
 mlca_signals = MlcaSignals()
