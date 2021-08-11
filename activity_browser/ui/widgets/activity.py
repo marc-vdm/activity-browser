@@ -154,6 +154,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
             return
         elif option == 'Add to new Module':
             mlca_signals.new_module_from_act.emit(self.parent.key)
+            signals.show_tab.emit("mLCA")
         else:
             modules = msc.related_activities[self.parent.key]
             for module in modules:
@@ -163,6 +164,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
                 mlca_signals.replace_output.emit((module[0], self.parent.key))
             elif module[1] == 'chain':
                 mlca_signals.add_to_chain.emit((module[0], self.parent.key))
+            signals.show_tab.emit("mLCA")
 
         self.module_combo.setCurrentIndex(0)
 
