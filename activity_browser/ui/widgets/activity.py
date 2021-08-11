@@ -144,7 +144,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
             for module in modules:
                 # put in any module that this activity is not already part of
                 if self.parent.key not in msc.affected_activities[module[0]] and module[0] not in items:
-                    items.append(str(' ' + module[0] + ' '))
+                    items.append(module[0])
         items = ['', 'Add to new Module'] + items
         self.module_combo.addItems(items)
 

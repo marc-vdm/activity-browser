@@ -462,6 +462,11 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
         mlca_signals.add_to_chain.connect(self.add_to_chain)
+        mlca_signals.remove_from_chain.connect(self.remove_from_chain)
+        mlca_signals.add_to_cut.connect(self.add_to_cut)
+        mlca_signals.remove_from_cut.connect(self.remove_from_cut)
+        mlca_signals.add_to_output.connect(self.add_to_output)
+        mlca_signals.remove_from_output.connect(self.remove_from_output)
         mlca_signals.replace_output.connect(self.replace_output)
 
     def project_change(self):
@@ -606,24 +611,68 @@ class ModularSystemController(object):
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
-        for chain in self.get_modular_system.get_module(module_name).chain:
-            if chain == key:
-                self.get_modular_system.get_module(module_name).chain.remove(chain)
+        # (potentially) remove from outputs
+        self.remove_from_output(module_key, update=False)
+        # (potentially) remove from cuts
+        self.remove_from_cut((module_name, key, 'chain'), update=False)
+        # remove from chain
+        for chn in self.get_modular_system.get_module(module_name).chain:
+            if chn == key:
+                self.get_modular_system.get_module(module_name).chain.remove(chn)
+                break
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
+
+    def add_to_cut(self, module_key):
+        """Add activity to chain.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+
+        #TODO get this data from somewhere
+        cut_product_key = None
+        cut_name = ''
+        cut_amount = 1.0
+
+        #self.get_modular_system.get_module(module_name).cuts.append((cut_product_key, key, cut_name, cut_amount))
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def remove_from_cut(self, module_key_src, update=True):
+        """Remove activity from output.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key, info = module_key_src
+        for cut in self.get_modular_system.get_module(module_name).cuts:
+            # in 'cut', [0] is the key of the external activity, [1] is the module activity
+            if cut[1] == key and info == 'chain':
+                # the activity is being deleted, remove all cuts with this activity
+                self.get_modular_system.get_module(module_name).cuts.remove(cut)
+            elif cut[0] == key:
+                # the right activity needs to be found and the cut deleted
+                self.get_modular_system.get_module(module_name).cuts.remove(cut)
+            elif cut[1] == key and info == cut[3]:
+                # the right cut needs to be found and then deleted
+                self.get_modular_system.get_module(module_name).cuts.remove(cut)
+        if update:
+            self.update_modular_system()
+            mlca_signals.module_db_changed.emit()
+            mlca_signals.module_changed.emit(module_name)
 
     def add_to_output(self, module_key):
         """Add activity to output.
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
-        self.get_modular_system.get_module(module_name).outputs.append((key, 'Unspecified Output', 1.0))
+        ref_prod = bw.get_activity(key)["reference product"]
+        self.get_modular_system.get_module(module_name).outputs.append((key, ref_prod, 1.0))
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_output(self, module_key):
+    def remove_from_output(self, module_key, update=True):
         """Remove activity from output.
 
         module_key is a tuple with (module_name, activity key)"""
@@ -631,9 +680,11 @@ class ModularSystemController(object):
         for output in self.get_modular_system.get_module(module_name).outputs:
             if output[0] == key:
                 self.get_modular_system.get_module(module_name).outputs.remove(output)
-        self.update_modular_system()
-        mlca_signals.module_db_changed.emit()
-        mlca_signals.module_changed.emit(module_name)
+                break
+        if update:
+            self.update_modular_system()
+            mlca_signals.module_db_changed.emit()
+            mlca_signals.module_changed.emit(module_name)
 
     def replace_output(self, module_key):
         """Replace output activity in outputs.
