@@ -50,9 +50,15 @@ class GenericModuleModel(PandasModel):
         super().__init__(parent=parent)
 
         self.key_col = 0
+        self.module_name = None
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
+        mlca_signals.module_changed.connect(self.optional_sync)
+
+    def optional_sync(self, module_name):
+        if module_name == self.module_name:
+            self.sync(module_name)
 
     def get_activity_key(self, proxy: QModelIndex) -> str:
         idx = self.proxy_to_source(proxy)
@@ -67,6 +73,7 @@ class ModuleOutputsModel(GenericModuleModel):
         self.connect_signals()
 
     def sync(self, module_name: str) -> None:
+        self.module_name = module_name
         for raw_module in msc.get_raw_data:
             if raw_module['name'] == module_name:
                 outputs = raw_module['outputs']
@@ -106,6 +113,7 @@ class ModuleChainModel(GenericModuleModel):
         self.connect_signals()
 
     def sync(self, module_name: str) -> None:
+        self.module_name = module_name
         for raw_module in msc.get_raw_data:
             if raw_module['name'] == module_name:
                 chain = raw_module['chain']

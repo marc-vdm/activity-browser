@@ -76,7 +76,7 @@ class Module(object):
                 print('activity does not exist in Brightway:', act_key)
                 return
 
-            chain_exc[act_key] = {'exchanges': [e for e in activity.exchanges()]}
+            chain_exc[act_key] = {'exchanges': [e for e in activity.technosphere()]}
         return chain_exc
 
     def construct_graph(self, db):

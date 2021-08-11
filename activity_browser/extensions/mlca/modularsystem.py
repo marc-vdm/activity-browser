@@ -45,7 +45,6 @@ class ModularSystem(object):
         self.has_loops = False
         if module_list:
             self.update(module_list)
-            self.affected_activities
 
     def update(self, module_list):
         """
@@ -119,15 +118,6 @@ class ModularSystem(object):
         """Returns all product names."""
         return sorted(set(itertools.chain(*[[x[0] for x in y.pp
             ] for y in self.module_list])))
-
-    @property
-    def affected_activities(self):
-        """Dict of all affected modules by module."""
-        aa = {}
-        for module in self.raw_data:
-            activities = set(activity for activity in module['chain'])
-            aa[module['name']] = list(activities)
-        return aa
 
     # DATABASE METHODS (FILE I/O, MODULAR SYSTEM MODIFICATION)
 
@@ -458,6 +448,7 @@ class ModularSystemController(object):
 
         self.modular_system = None
         self.raw_data = None
+        self.affected_activities = None
         self.related_activities = None
 
         self.modular_system_path
@@ -469,6 +460,9 @@ class ModularSystemController(object):
         signals.project_selected.connect(self.project_change)
         mlca_signals.copy_module.connect(self.copy_module)
         mlca_signals.module_db_changed.connect(self.get_related_activities)
+        mlca_signals.module_db_changed.connect(self.get_affected_activities)
+        mlca_signals.add_to_chain.connect(self.add_to_chain)
+        mlca_signals.replace_output.connect(self.replace_output)
 
     def project_change(self):
         """Get project's new modular system location"""
@@ -501,6 +495,7 @@ class ModularSystemController(object):
             # load raw data too
             self.raw_data = self.modular_system.raw_data
             self.get_related_activities()
+            self.get_affected_activities()
             return self.modular_system
 
     @property
@@ -583,12 +578,12 @@ class ModularSystemController(object):
         # update the raw data
         self.raw_data = self.modular_system.raw_data
         self.save_modular_system()
-        mlca_signals.module_db_changed.emit()
 
     def rename_module(self, old_module_name, new_module_name):
         """Rename module in modular system."""
         self.get_modular_system.get_module(old_module_name).name = new_module_name
         self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
 
     def set_module_color(self, module_name, color):
         """Change color of module in modular system."""
@@ -596,18 +591,106 @@ class ModularSystemController(object):
         self.update_modular_system()
         mlca_signals.module_color_set.emit(module_name)
 
+    def add_to_chain(self, module_key):
+        """Add activity to chain.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+        self.get_modular_system.get_module(module_name).chain.add(key)
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def remove_from_chain(self, module_key):
+        """Remove activity from chain.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+        for chain in self.get_modular_system.get_module(module_name).chain:
+            if chain == key:
+                self.get_modular_system.get_module(module_name).chain.remove(chain)
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def add_to_output(self, module_key):
+        """Add activity to output.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+        self.get_modular_system.get_module(module_name).outputs.append((key, 'Unspecified Output', 1.0))
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def remove_from_output(self, module_key):
+        """Remove activity from output.
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+        for output in self.get_modular_system.get_module(module_name).outputs:
+            if output[0] == key:
+                self.get_modular_system.get_module(module_name).outputs.remove(output)
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def replace_output(self, module_key):
+        """Replace output activity in outputs.
+        Removes the output and replaces with an activity 'downstream' from the output
+
+        module_key is a tuple with (module_name, activity key)"""
+        module_name, key = module_key
+        self.get_modular_system.get_module(module_name).chain.add(key)
+
+        exchanges = [ex['input'] for ex in bw.get_activity(key).technosphere()]
+        for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
+            if output[0] in exchanges:
+                _, custom_name, amount = output
+                self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
+
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def get_affected_activities(self):
+        """Dict of all activities in module, by module."""
+        aa = {}
+        for module in self.get_raw_data:
+            activities = set(activity for activity in module['chain'])
+            aa[module['name']] = list(activities)
+        self.affected_activities = aa
+        return aa
+
     def get_related_activities(self):
+        """Dict of all activities in and 'next to' module, by activity.
+
+        Each activity that is an input to a part of the module or downstream from an output is in this dict."""
         keys = {}
-        for module in self.get_modular_system.get_modules():
+        _keys = {}
+        for module in self.modular_system.get_modules():
+            # check for upstream processes
             for act_key in module.chain:
                 activity = bw.get_activity(act_key)
-                for exchange in activity.exchanges():
+                for exchange in activity.technosphere():
                     exch_key = exchange['input']
-                    if keys.get(exch_key, False) and (module.name, 'chain') not in keys[exch_key] :
+                    if keys.get(exch_key, False) \
+                            and module.name not in _keys[exch_key]:
                         keys[exch_key].append((module.name, 'chain'))
                     else:
-                        if exch_key not in self.modular_system.affected_activities[module.name]:
-                            keys[exch_key] = [(module.name, 'chain')]
+                        _keys[exch_key] = module.name
+                        keys[exch_key] = [(module.name, 'chain')]
+            # check for downstream processes
+            for act_key, _, _ in module.outputs:
+                activity = bw.get_activity(act_key)
+                for exchange in activity.upstream():
+                    exch_key = exchange['output']
+                    if keys.get(exch_key, False) \
+                            and module.name not in _keys[exch_key]:
+                        keys[exch_key].append((module.name, 'output'))
+                    else:
+                        _keys[exch_key] = module.name
+                        keys[exch_key] = [(module.name, 'output')]
 
         self.related_activities = keys
         return keys
