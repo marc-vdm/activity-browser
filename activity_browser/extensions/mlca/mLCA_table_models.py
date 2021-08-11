@@ -31,6 +31,8 @@ class ModuleDatabaseModel(PandasModel):
 
     def sync(self):
         data = []
+        # load the full modular system here so that it is available for the rest of AB on project load
+        msc.get_modular_system
         for raw_module in msc.get_raw_data:
             numbers = [len(raw_module['outputs']), len(set(raw_module['chain'])), len(set(raw_module['cuts']))]
             data.append({
