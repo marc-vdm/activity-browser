@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Slot
 
@@ -8,6 +10,9 @@ from ..icons import qicons
 from .delegates import CheckboxDelegate
 from .models import DatabasesModel, ActivitiesBiosphereModel
 from .views import ABDataFrameView
+
+from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
+from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
 
 class DatabasesTable(ABDataFrameView):
@@ -113,6 +118,9 @@ class ActivitiesBiosphereTable(ABDataFrameView):
         self.delete_activity_action = QtWidgets.QAction(
             qicons.delete, "Delete activity/-ies", None
         )
+        self.add_to_module_action = QtWidgets.QAction(
+            qicons.add, "Add activity to new module", None
+        )
 
         self.connect_signals()
 
@@ -142,6 +150,20 @@ class ActivitiesBiosphereTable(ABDataFrameView):
             qicons.duplicate_to_other_database, "Duplicate to other database",
             self.duplicate_activities_to_db
         )
+
+        items = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(items) > 0:
+            sub_menu = menu.addMenu(qicons.add, "Add activity to module")
+            sub_menu.addAction(self.add_to_module_action)
+            for item in items:
+                module_action = QtWidgets.QAction(
+                    qicons.add, "Add activity to '{}'".format(item), None
+                )
+                sub_menu.addAction(module_action)
+                module_action.triggered.connect(partial(self.module_context_handler, item))
+        else:
+            menu.addAction(self.add_to_module_action)
+
         menu.exec_(event.globalPos())
 
     def connect_signals(self):
@@ -156,6 +178,32 @@ class ActivitiesBiosphereTable(ABDataFrameView):
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
         self.model.updated.connect(self.set_context_menu_policy)
+        self.add_to_module_action.triggered.connect(partial(self.module_context_handler, 'new'))
+
+    def generate_module_items(self, key):
+        items = []
+        if msc.related_activities and msc.related_activities.get(key, False):
+            modules = msc.related_activities[key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if key not in msc.affected_activities[module[0]] and module[0] not in items:
+                    items.append(module[0])
+        return items
+
+    def module_context_handler(self, item_name):
+        """Decide what happens based on which context menu option was clicked"""
+        key = self.model.get_key(self.currentIndex())
+        if item_name == 'new':
+            mlca_signals.new_module_from_act.emit(key)
+        else:
+            modules = msc.related_activities[key]
+            for module in modules:
+                if module[0] == item_name:
+                    break
+            if module[1] == 'output':
+                mlca_signals.replace_output.emit((module[0], key))
+            elif module[1] == 'chain':
+                mlca_signals.add_to_chain.emit((module[0], key))
 
     def get_key(self, proxy: QtCore.QModelIndex) -> tuple:
         return self.model.get_key(proxy)

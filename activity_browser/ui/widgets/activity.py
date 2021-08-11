@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import partial
 
-from PySide2 import QtCore, QtWidgets, QtGui
+from PySide2 import QtCore, QtWidgets
 from PySide2.QtWidgets import QMessageBox
 
 from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
