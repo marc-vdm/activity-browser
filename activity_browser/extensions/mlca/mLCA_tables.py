@@ -190,14 +190,6 @@ class ModuleChainTable(GenericModuleTable):
         )
         self.add_cut_action.triggered.connect(self.add_cut)
 
-        # allow double click to open the activity
-        self.doubleClicked.connect(
-            lambda: signals.open_activity_tab.emit(self.selected_activity_key)
-        )
-        self.doubleClicked.connect(
-            lambda: signals.add_activity_to_history.emit(self.selected_activity_key)
-        )
-
         self.table_name = 'module chain'
 
     def contextMenuEvent(self, event) -> None:
@@ -249,11 +241,6 @@ class ModuleCutsTree(ABDictTreeView):
 
     def _connect_signals(self):
         super()._connect_signals()
-
-        self.doubleClicked.connect(
-            lambda: signals.open_activity_tab.emit(
-                self.selected_activity_key)
-                                   )
 
     @property
     def selected_activity_key(self) -> str:
