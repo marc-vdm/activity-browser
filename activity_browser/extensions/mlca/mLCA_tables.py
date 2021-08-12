@@ -10,6 +10,8 @@ from .mLCA_signals import mlca_signals
 from PySide2 import QtWidgets
 from activity_browser.signals import signals
 
+#from .delegates import *
+from activity_browser.ui.tables.delegates import *
 
 class ModuleDatabaseTable(ABDataFrameView):
     """ TODO description
@@ -103,13 +105,6 @@ class GenericModuleTable(ABDataFrameView):
         pass
         #mlca_signals.module_selected.connect(self.update_table)
 
-        self.doubleClicked.connect(
-            lambda: signals.open_activity_tab.emit(self.selected_activity_key)
-        )
-        self.doubleClicked.connect(
-            lambda: signals.add_activity_to_history.emit(self.selected_activity_key)
-        )
-
         self.open_activity_action.triggered.connect(
             lambda: signals.open_activity_tab.emit(self.selected_activity_key))
         self.open_graph_action.triggered.connect(
@@ -158,6 +153,13 @@ class ModuleOutputsTable(GenericModuleTable):
         )
         self.remove_output_action.triggered.connect(self.remove_output)
 
+        # make table editable
+        self.setEditTriggers(QtWidgets.QTableView.DoubleClicked)
+        self.setItemDelegateForColumn(0, StringDelegate(self))
+        self.setItemDelegateForColumn(1, FloatDelegate(self))
+
+        self.table_name = 'module outputs'
+
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.open_activity_action)
@@ -187,6 +189,16 @@ class ModuleChainTable(GenericModuleTable):
             qicons.add, "Add activity as cut", None
         )
         self.add_cut_action.triggered.connect(self.add_cut)
+
+        # allow double click to open the activity
+        self.doubleClicked.connect(
+            lambda: signals.open_activity_tab.emit(self.selected_activity_key)
+        )
+        self.doubleClicked.connect(
+            lambda: signals.add_activity_to_history.emit(self.selected_activity_key)
+        )
+
+        self.table_name = 'module chain'
 
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu(self)

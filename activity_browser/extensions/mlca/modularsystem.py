@@ -468,6 +468,7 @@ class ModularSystemController(object):
         mlca_signals.add_to_output.connect(self.add_to_output)
         mlca_signals.remove_from_output.connect(self.remove_from_output)
         mlca_signals.replace_output.connect(self.replace_output)
+        mlca_signals.alter_output.connect(self.alter_output)
 
     def project_change(self):
         """Get project's new modular system location"""
@@ -698,6 +699,21 @@ class ModularSystemController(object):
         for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
             if output[0] in exchanges:
                 _, custom_name, amount = output
+                self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
+
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
+
+    def alter_output(self, module_key_data):
+        """Alter output activity in outputs.
+        Alters the output of an activity based on incoming data
+
+        module_key_data is a tuple with (module_name, activity key, custom name, amount)"""
+        module_name, key, custom_name, amount = module_key_data
+
+        for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
+            if output[0] == key:
                 self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
 
         self.update_modular_system()
