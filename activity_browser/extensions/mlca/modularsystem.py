@@ -689,15 +689,13 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_output(self, module_key, update=True):
+    def remove_from_output(self, module_out, update=True):
         """Remove activity from output.
 
-        module_key is a tuple with (module_name, activity key)"""
-        module_name, key = module_key
-        for output in self.get_modular_system.get_module(module_name).outputs:
-            if output[0] == key:
-                self.get_modular_system.get_module(module_name).outputs.remove(output)
-                break
+        module_out is a tuple with (module_name, output)"""
+        module_name, _output = module_out
+        self.get_modular_system.get_module(module_name).outputs.remove(_output)
+
         if update:
             self.update_modular_system()
             mlca_signals.module_db_changed.emit()
@@ -721,16 +719,17 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def alter_output(self, module_key_data):
+    def alter_output(self, module_old_new):
         """Alter output activity in outputs.
         Alters the output of an activity based on incoming data
 
-        module_key_data is a tuple with (module_name, activity key, custom name, amount)"""
-        module_name, key, custom_name, amount = module_key_data
+        module_old_new is a tuple with (module_name, old output, new output)
+        output consists of: (key, custom_name, amount)"""
+        module_name, old_output, new_output = module_old_new
 
         for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
-            if output[0] == key:
-                self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
+            if output == old_output:
+                self.get_modular_system.get_module(module_name).outputs[i] = new_output
 
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()

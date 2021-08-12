@@ -168,8 +168,8 @@ class ModuleOutputsTable(GenericModuleTable):
         menu.exec_(event.globalPos())
 
     def remove_output(self):
-        mlca_signals.remove_from_output.emit((self.model.module_name, self.selected_activity_key))
-
+        output = self.model.get_output_data(self.currentIndex())
+        mlca_signals.remove_from_output.emit((self.model.module_name, output))
 
 class ModuleChainTable(GenericModuleTable):
     """ TODO description
