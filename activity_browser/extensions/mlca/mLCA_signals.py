@@ -29,5 +29,6 @@ class MlcaSignals(QObject):
     add_to_output = Signal(tuple)
     remove_from_output = Signal(tuple)
     replace_output = Signal(tuple)
+    alter_output = Signal(tuple)
 
 mlca_signals = MlcaSignals()

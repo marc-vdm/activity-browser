@@ -5,7 +5,7 @@ from ...ui.tables.models.base import (
 import brightway2 as bw
 from activity_browser.signals import signals
 
-from PySide2.QtCore import QModelIndex
+from PySide2.QtCore import QModelIndex, Qt
 import pandas as pd
 from activity_browser.bwutils import AB_metadata
 
@@ -66,7 +66,46 @@ class GenericModuleModel(PandasModel):
         idx = self.proxy_to_source(proxy)
         return self._dataframe.iat[idx.row(), -1]
 
-class ModuleOutputsModel(GenericModuleModel):
+class GenericEditableModuleModel(GenericModuleModel):
+    def flags(self, index):
+        """ Returns ItemIsEditable flag
+        """
+        return super().flags(index) | Qt.ItemIsEditable
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """ Inserts the given validated data into the given index
+        """
+        if index.isValid() and role == Qt.EditRole:
+            self._dataframe.iat[index.row(), index.column()] = value
+            self.dataChanged.emit(index, index, [role])
+            return True
+        return False
+
+    def setData(self, index: QModelIndex, value, role=Qt.EditRole):
+        """Whenever data is changed, call an update to the relevant exchange
+                or activity.
+                """
+        key = self.get_activity_key(index)
+        custom_name = self._dataframe.iat[index.row(), 0]
+        amount = self._dataframe.iat[index.row(), 1]
+
+        header = self._dataframe.columns[index.column()]
+        changed = False
+        if header == 'custom name':
+            if custom_name != value:
+                changed = True
+            custom_name = value
+        elif header == 'quantity':
+            if amount != value:
+                changed = True
+            amount = value
+
+        if changed:
+            module_key_data = (self.module_name, key, custom_name, amount)
+            mlca_signals.alter_output.emit(module_key_data)
+        return True
+
+class ModuleOutputsModel(GenericEditableModuleModel):
     HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database", "key"]
 
     def __init__(self, parent=None):
