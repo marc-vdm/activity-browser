@@ -5,6 +5,7 @@ from ...ui.tables.models.base import (
 import brightway2 as bw
 from activity_browser.signals import signals
 
+from PySide2 import QtWidgets
 from PySide2.QtCore import QModelIndex, Qt
 import pandas as pd
 from activity_browser.bwutils import AB_metadata
@@ -201,16 +202,24 @@ class ModuleCutsModel(BaseTreeModel):
         self.setup_model_data()
         self.connect_signals()
 
-    def flags(self, index):
-        """ Returns ItemIsEditable flag
-        """
-        return super().flags(index) | Qt.ItemIsEditable
+    #def flags(self, index):
+    #    """ Returns ItemIsEditable flag
+    #    """
+    #    return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value, role=Qt.EditRole):
         """Whenever data is changed, call an update to the relevant exchange
                 or activity.
                 """
-        print(value, index.row(), index.column(), index.child(index.row(), index.column()))
+        #idx_ch = index.child(index.row()+1, index.column())
+
+        #idx_ch1 = index.child(0, -1).data()
+        #idx_ch2 = index.child(1, -1).data()
+
+        #idx_ch.text()
+        #print(value, index.row(), index.column(), type(idx_ch), idx_ch.data())
+        #print(idx_ch1, idx_ch2)
+
 
         #key = self.get_activity_key(index)
         #custom_name = self._dataframe.iat[index.row(), 0]
@@ -247,6 +256,7 @@ class ModuleCutsModel(BaseTreeModel):
             # set first branch level as name
             prod_branch = ['' for i in range(len(self.HEADERS)-2)]  # change 2 to as many columns are hidden
             prod_branch[0] = product.split('::')[-2]
+            #prod_branch = ModuleCutsItem.build_item(prod_branch, self.root)
             prod_branch = ModuleCutsItem.build_item(prod_branch, self.root)
             # set leaves with data
             data = self._dataframe[self._dataframe["cut"] == product]

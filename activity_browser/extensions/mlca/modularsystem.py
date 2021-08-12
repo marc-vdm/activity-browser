@@ -647,15 +647,22 @@ class ModularSystemController(object):
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
 
-        #TODO get this data from somewhere
-        cut_product_key = None
-        cut_name = ''
-        cut_amount = 1.0
+        module = self.get_modular_system.get_module(module_name)
 
-        #self.get_modular_system.get_module(module_name).cuts.append((cut_product_key, key, cut_name, cut_amount))
-        self.update_modular_system()
-        mlca_signals.module_db_changed.emit()
-        mlca_signals.module_changed.emit(module_name)
+        if not module.internal_edges_with_cuts:
+            print("Nothing to cut from.")
+        else:
+            parents, children, value = zip(*module.internal_edges_with_cuts)
+            if key in children:
+                print("Cannot add cut. Activity is linked to another activity.")
+            else:
+                new_cuts = [(key, pcv[1], "Unspecified Input", pcv[2])
+                            for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]
+                for new_cut in new_cuts:
+                    self.get_modular_system.get_module(module_name).cuts.append(new_cut)
+                self.update_modular_system()
+                mlca_signals.module_db_changed.emit()
+                mlca_signals.module_changed.emit(module_name)
 
     def remove_from_cut(self, module_key_src, update=True):
         """Remove activity from output.

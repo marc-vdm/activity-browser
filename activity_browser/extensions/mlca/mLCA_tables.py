@@ -234,8 +234,10 @@ class ModuleCutsTree(ABDictTreeView):
         self.remove_cut_action.triggered.connect(self.remove_cut)
 
         # make table editable
-        self.setEditTriggers(QtWidgets.QTableView.DoubleClicked)
-        self.setItemDelegateForColumn(0, StringDelegate(self))
+        #self.setEditTriggers(QtWidgets.QTableView.DoubleClicked)
+        #self.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
+        #self.setItemDelegateForColumn(0, StringDelegate(self))
+
 
         self._connect_signals()
 
