@@ -153,12 +153,15 @@ class ActivitiesBiosphereTable(ABDataFrameView):
 
         items = self.generate_module_items(self.model.get_key(self.currentIndex()))
         if len(items) > 0:
+            menu.addSeparator()
             sub_menu = menu.addMenu(qicons.add, "Add activity to module")
             sub_menu.addAction(self.add_to_module_action)
+            module_actions = []
             for item in items:
-                module_action = QtWidgets.QAction(
+                module_actions.append(QtWidgets.QAction(
                     qicons.add, "Add activity to '{}'".format(item), None
-                )
+                ))
+            for module_action in module_actions:
                 sub_menu.addAction(module_action)
                 module_action.triggered.connect(partial(self.module_context_handler, item))
         else:

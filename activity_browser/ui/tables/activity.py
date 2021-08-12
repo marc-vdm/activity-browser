@@ -166,15 +166,17 @@ class TechnosphereExchangeTable(BaseExchangeTable):
 
         items = self.generate_module_items(self.model.get_key(self.currentIndex()))
         if len(items) > 0:
+            menu.addSeparator()
             if len(items) > 1:
                 sub_menu = menu.addMenu(qicons.add, "Add activity to module")
             else:
                 sub_menu = menu
-            # TODO fix only 1 item shown in menu when len(items) > 1
+            module_actions = []
             for item in items:
-                module_action = QtWidgets.QAction(
+                module_actions.append(QtWidgets.QAction(
                     qicons.add, "Add activity to '{}'".format(item), None
-                )
+                ))
+            for module_action in module_actions:
                 sub_menu.addAction(module_action)
                 module_action.triggered.connect(partial(self.module_context_handler, item))
 
@@ -193,6 +195,10 @@ class TechnosphereExchangeTable(BaseExchangeTable):
     def module_context_handler(self, item_name):
         """Decide what happens based on which context menu option was clicked"""
         key = self.model.get_key(self.currentIndex())
+
+        if item_name:
+            print('++++', item_name)
+            return
 
         modules = msc.related_activities[key]
         for module in modules:
@@ -273,15 +279,17 @@ class DownstreamExchangeTable(BaseExchangeTable):
 
         items = self.generate_module_items(self.model.get_key(self.currentIndex()))
         if len(items) > 0:
+            menu.addSeparator()
             if len(items) > 1:
                 sub_menu = menu.addMenu(qicons.add, "Add activity to module")
             else:
                 sub_menu = menu
-            # TODO fix only 1 item shown in menu when len(items) > 1
+            module_actions = []
             for item in items:
-                module_action = QtWidgets.QAction(
+                module_actions.append(QtWidgets.QAction(
                     qicons.add, "Add activity to '{}'".format(item), None
-                )
+                ))
+            for module_action in module_actions:
                 sub_menu.addAction(module_action)
                 module_action.triggered.connect(partial(self.module_context_handler, item))
 
