@@ -44,6 +44,10 @@ class mLCATab(QtWidgets.QWidget):
         self.connect_signals()
 
     def connect_signals(self):
+        signals.project_selected.connect(self.change_project)
+        mlca_signals.module_db_changed.connect(self.update_widgets)
+        mlca_signals.module_selected.connect(self.update_widgets)
+
         mlca_signals.new_module.connect(self.new_module_dialog)
         mlca_signals.new_module_from_act.connect(self.new_module_dialog)
         mlca_signals.del_module.connect(self.del_module_dialog)
@@ -51,20 +55,22 @@ class mLCATab(QtWidgets.QWidget):
         mlca_signals.module_set_color.connect(self.change_color_module_dialog)
 
     def change_project(self):
-        pass
+        self.update_widgets()
 
     def update_widgets(self):
         #TODO revise description
         """Update widgets when a new database has been selected or the project has been changed.
         Hide empty widgets (e.g. Biosphere Flows table when an inventory database is selected)."""
-        no_modules = self.module_widget.outputs_table.rowCount() == 0
+        no_modules = self.modular_database_widget.table.rowCount() == 0
 
         self.modular_database_widget.update_widget()
 
         if not no_modules:
-            self.modular_database_widget.label_no_module_selected.hide()
+            self.modular_database_widget.label_no_modules.hide()
+            self.modular_database_widget.table.show()
         else:
-            self.modular_database_widget.label_no_module_selected.show()
+            self.modular_database_widget.label_no_modules.show()
+            self.modular_database_widget.table.hide()
             self.module_widget.hide()
         self.resize_splitter()
 
@@ -270,15 +276,13 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self.table = ModuleDatabaseTable()
 
         # Labels
-        self.label_no_module_selected = QtWidgets.QLabel(
-            "Select a module (double-click on table)."
+        self.label_no_modules = QtWidgets.QLabel(
+            "Start a new module by pressing the 'New' button"
         )
 
         # Buttons
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_module_button.setToolTip('Add a new module')
-
-        self.toolbar = QtWidgets.QLabel('Toolbar goes here')
 
         self._construct_layout()
         self._connect_signals()
@@ -302,14 +306,13 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         header_layout.setAlignment(QtCore.Qt.AlignLeft)
         header_layout.addWidget(header("Modules:"))
         header_layout.addWidget(self.new_module_button)
-        header_layout.addWidget(self.label_no_module_selected)
+        header_layout.addWidget(self.label_no_modules)
         header_widget.setLayout(header_layout)
 
         # Overall Layout
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
         layout.addWidget(header_widget)
-        layout.addWidget(self.toolbar)
         layout.addWidget(self.table)
         self.setLayout(layout)
 
@@ -325,18 +328,11 @@ class ModuleWidget(QtWidgets.QWidget):
         self.cuts_tree = ModuleCutsTree(self)
         self.current_module = None
 
-        # Header widget
-        self.header_widget = QtWidgets.QWidget()
-        self.header_layout = QtWidgets.QHBoxLayout()
-        self.header_layout.setAlignment(QtCore.Qt.AlignLeft)
-        self.header_layout.addWidget(header('Module:'))
-        self.header_widget.setLayout(self.header_layout)
-
-        # name widget
+        # Header/name widget
         self.name_widget = QtWidgets.QWidget()
         self.name_layout = QtWidgets.QHBoxLayout()
         self.name_layout.setAlignment(QtCore.Qt.AlignLeft)
-        self.name_layout.addWidget(QtWidgets.QLabel('Name:'))
+        self.name_layout.addWidget(header('Module:'))
         self.module_name_field = QtWidgets.QLineEdit()
         self.name_layout.addWidget(self.module_name_field)
         self.module_color_editor = QtWidgets.QPushButton('Color')
@@ -368,7 +364,6 @@ class ModuleWidget(QtWidgets.QWidget):
         # Overall Layout
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
-        layout.addWidget(self.header_widget)
         layout.addWidget(self.name_widget)
         layout.addWidget(self.output_scaling_checkbox)
         layout.addWidget(QtWidgets.QLabel('Outputs'))
