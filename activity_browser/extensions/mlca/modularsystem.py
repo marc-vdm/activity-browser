@@ -608,15 +608,16 @@ class ModularSystemController(object):
         self.update_modular_system()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_chain(self, module_key):
+    def add_to_chain(self, module_key, update=True):
         """Add activity to chain.
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         self.get_modular_system.get_module(module_name).chain.add(key)
-        self.update_modular_system()
-        mlca_signals.module_db_changed.emit()
-        mlca_signals.module_changed.emit(module_name)
+        if update:
+            self.update_modular_system()
+            mlca_signals.module_db_changed.emit()
+            mlca_signals.module_changed.emit(module_name)
 
     def remove_from_chain(self, module_key):
         """Remove activity from chain.
@@ -654,6 +655,7 @@ class ModularSystemController(object):
 
     def remove_from_cut(self, module_key_src, update=True):
         """Remove activity from output.
+        Adds the 'cut' activity to the chain
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key, info = module_key_src
@@ -661,12 +663,15 @@ class ModularSystemController(object):
             # in 'cut', [0] is the key of the external activity, [1] is the module activity
             if cut[1] == key and info == 'chain':
                 # the activity is being deleted, remove all cuts with this activity
+                self.add_to_chain((module_name, cut[0]), update=False)
                 self.get_modular_system.get_module(module_name).cuts.remove(cut)
             elif cut[0] == key:
                 # the right activity needs to be found and the cut deleted
+                self.add_to_chain((module_name, cut[0]), update=False)
                 self.get_modular_system.get_module(module_name).cuts.remove(cut)
             elif cut[1] == key and info == cut[3]:
                 # the right cut needs to be found and then deleted
+                self.add_to_chain((module_name, cut[0]), update=False)
                 self.get_modular_system.get_module(module_name).cuts.remove(cut)
         if update:
             self.update_modular_system()
