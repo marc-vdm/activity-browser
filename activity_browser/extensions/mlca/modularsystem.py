@@ -462,10 +462,14 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
         mlca_signals.module_set_obs.connect(self.set_output_based_scaling)
+
         mlca_signals.add_to_chain.connect(self.add_to_chain)
         mlca_signals.remove_from_chain.connect(self.remove_from_chain)
+
         mlca_signals.add_to_cut.connect(self.add_to_cut)
         mlca_signals.remove_from_cut.connect(self.remove_from_cut)
+        mlca_signals.alter_cut.connect(self.alter_cut)
+
         mlca_signals.add_to_output.connect(self.add_to_output)
         mlca_signals.remove_from_output.connect(self.remove_from_output)
         mlca_signals.replace_output.connect(self.replace_output)
@@ -677,6 +681,22 @@ class ModularSystemController(object):
             self.update_modular_system()
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
+
+    def alter_cut(self, module_):
+        """Alter cut product in cuts.
+        Alters the cut product of a cut based on incoming data
+
+        module_old_new is a tuple with (module_name, old output, new output)
+        output consists of: (key, custom_name, amount)"""
+        #module_name, old_output, new_output = module_old_new
+        module_name, = module_
+
+        for i, cut in enumerate(self.get_modular_system.get_module(module_name).cuts):
+            pass
+
+        self.update_modular_system()
+        mlca_signals.module_db_changed.emit()
+        mlca_signals.module_changed.emit(module_name)
 
     def add_to_output(self, module_key):
         """Add activity to output.

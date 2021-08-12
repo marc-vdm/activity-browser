@@ -201,6 +201,35 @@ class ModuleCutsModel(BaseTreeModel):
         self.setup_model_data()
         self.connect_signals()
 
+    def flags(self, index):
+        """ Returns ItemIsEditable flag
+        """
+        return super().flags(index) | Qt.ItemIsEditable
+
+    def setData(self, index: QModelIndex, value, role=Qt.EditRole):
+        """Whenever data is changed, call an update to the relevant exchange
+                or activity.
+                """
+        print(value, index.row(), index.column(), index.child(index.row(), index.column()))
+
+        #key = self.get_activity_key(index)
+        #custom_name = self._dataframe.iat[index.row(), 0]
+        #amount = self._dataframe.iat[index.row(), 1]
+        #old_output = (key, custom_name, amount)
+
+        #header = self._dataframe.columns[index.column()]
+        #if header == 'custom name':
+        #    custom_name = value
+        #elif header == 'quantity':
+        #    amount = value
+
+        #new_output = (key, custom_name, amount)
+
+        #if old_output != new_output:
+        #    module_old_new = (self.module_name, old_output, new_output)
+        #    mlca_signals.alter_output.emit(module_old_new)
+        return True
+
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
         mlca_signals.module_changed.connect(self.optional_sync)
