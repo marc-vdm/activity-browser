@@ -79,21 +79,19 @@ class GenericEditableModuleModel(GenericModuleModel):
         key = self.get_activity_key(index)
         custom_name = self._dataframe.iat[index.row(), 0]
         amount = self._dataframe.iat[index.row(), 1]
+        old_output = (key, custom_name, amount)
 
         header = self._dataframe.columns[index.column()]
-        changed = False
         if header == 'custom name':
-            if custom_name != value:
-                changed = True
             custom_name = value
         elif header == 'quantity':
-            if amount != value:
-                changed = True
             amount = value
 
-        if changed:
-            module_key_data = (self.module_name, key, custom_name, amount)
-            mlca_signals.alter_output.emit(module_key_data)
+        new_output = (key, custom_name, amount)
+
+        if old_output != new_output:
+            module_old_new = (self.module_name, old_output, new_output)
+            mlca_signals.alter_output.emit(module_old_new)
         return True
 
 class ModuleOutputsModel(GenericEditableModuleModel):
@@ -134,6 +132,14 @@ class ModuleOutputsModel(GenericEditableModuleModel):
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
+
+    def get_output_data(self, proxy: QModelIndex) -> str:
+        idx = self.proxy_to_source(proxy)
+        output_data = (self._dataframe.iat[idx.row(), -1],
+                       self._dataframe.iat[idx.row(), 0],
+                       self._dataframe.iat[idx.row(), 1]
+                       )
+        return output_data
 
 class ModuleChainModel(GenericModuleModel):
     """Contain data for chain in module."""
