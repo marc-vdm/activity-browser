@@ -461,6 +461,7 @@ class ModularSystemController(object):
         mlca_signals.copy_module.connect(self.copy_module)
         mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
+        mlca_signals.module_set_obs.connect(self.set_output_based_scaling)
         mlca_signals.add_to_chain.connect(self.add_to_chain)
         mlca_signals.remove_from_chain.connect(self.remove_from_chain)
         mlca_signals.add_to_cut.connect(self.add_to_cut)
@@ -596,6 +597,16 @@ class ModularSystemController(object):
         self.get_modular_system.get_module(module_name).color = color
         self.update_modular_system()
         mlca_signals.module_color_set.emit(module_name)
+
+    def set_output_based_scaling(self, module_state):
+        """Set the 'output based scaling' to the desired state.
+
+        module_state is a tuple with (module_name and the desired state)"""
+        module_name, state = module_state
+
+        self.get_modular_system.get_module(module_name).output_based_scaling = state
+        self.update_modular_system()
+        mlca_signals.module_changed.emit(module_name)
 
     def add_to_chain(self, module_key):
         """Add activity to chain.

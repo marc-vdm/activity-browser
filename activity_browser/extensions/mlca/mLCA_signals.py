@@ -20,6 +20,7 @@ class MlcaSignals(QObject):
 
     # changes to modules
     module_changed = Signal(tuple)
+    module_set_obs = Signal(tuple)
     module_set_color = Signal(str)
     module_color_set = Signal(str)
     add_to_chain = Signal(tuple)

@@ -326,7 +326,7 @@ class ModuleWidget(QtWidgets.QWidget):
         self.outputs_table = ModuleOutputsTable(self)
         self.chain_table = ModuleChainTable(self)
         self.cuts_tree = ModuleCutsTree(self)
-        self.current_module = None
+        self.module_name = None
 
         # Header/name widget
         self.name_widget = QtWidgets.QWidget()
@@ -342,8 +342,8 @@ class ModuleWidget(QtWidgets.QWidget):
         self.name_widget.setLayout(self.name_layout)
 
         # output widget
-        self.output_scaling_checkbox = QtWidgets.QCheckBox('Output based scaling (default)')
-        self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off')
+        self.output_scaling_checkbox = QtWidgets.QCheckBox('Output based scaling')
+        self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off (default on)')
         self.output_scaling_checkbox.setChecked(True)
 
         self.construct_layout()
@@ -358,7 +358,7 @@ class ModuleWidget(QtWidgets.QWidget):
         mlca_signals.module_color_set.connect(self.update_widget)
         self.module_name_field.editingFinished.connect(self.module_name_change)
         self.module_color_editor.clicked.connect(self.change_module_color)
-        #self.output_scaling_checkbox.toggled.connect()
+        self.output_scaling_checkbox.toggled.connect(self.output_based_scaling_editor)
 
     def construct_layout(self):
         # Overall Layout
@@ -375,14 +375,17 @@ class ModuleWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def reset_widget(self, deleted_module=None):
-        if deleted_module == self.current_module or not deleted_module:
+        if deleted_module == self.module_name or not deleted_module:
             self.hide()
-            self.current_module = None
+            self.module_name = None
+
+    def output_based_scaling_editor(self, state):
+        mlca_signals.module_set_obs.emit((self.module_name, state))
 
     def module_name_change(self):
         name = self.module_name_field.text()
         if name not in msc.module_names:
-            msc.rename_module(self.current_module, name)
+            msc.rename_module(self.module_name, name)
         else:
             print("Not possible", "A module with this name already exists.")
 
@@ -390,8 +393,10 @@ class ModuleWidget(QtWidgets.QWidget):
         mlca_signals.module_set_color.emit(self.module_name_field.text())
 
     def update_widget(self, module_name=''):
-        self.current_module = module_name
+        self.module_name = module_name
         self.module_name_field.setText(module_name)
-        color = msc.get_modular_system.get_modules([module_name])[0].color
+        obs = msc.get_modular_system.get_module(module_name).output_based_scaling
+        color = msc.get_modular_system.get_module(module_name).color
+        self.output_scaling_checkbox.setChecked(obs)
         self.module_color_editor.setStyleSheet("background-color: {}".format(color))
         self.show()
