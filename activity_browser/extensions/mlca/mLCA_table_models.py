@@ -72,15 +72,6 @@ class GenericEditableModuleModel(GenericModuleModel):
         """
         return super().flags(index) | Qt.ItemIsEditable
 
-    def setData(self, index, value, role=Qt.EditRole):
-        """ Inserts the given validated data into the given index
-        """
-        if index.isValid() and role == Qt.EditRole:
-            self._dataframe.iat[index.row(), index.column()] = value
-            self.dataChanged.emit(index, index, [role])
-            return True
-        return False
-
     def setData(self, index: QModelIndex, value, role=Qt.EditRole):
         """Whenever data is changed, call an update to the relevant exchange
                 or activity.
