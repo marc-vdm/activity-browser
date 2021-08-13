@@ -666,40 +666,35 @@ class ModularSystemController(object):
 
     def remove_from_cut(self, module_key_src, update=True):
         """Remove activity from output.
-        Adds the 'cut' activity to the chain
+        Adds the 'cut' activity to the chain if the key is not being removed from the chain.
 
-        module_key is a tuple with (module_name, activity key)"""
-        module_name, key, info = module_key_src
+        module_key_src is a tuple with (module_name, activity key OR cut, source info)"""
+        module_name, key_or_cut, src_info = module_key_src
         for cut in self.get_modular_system.get_module(module_name).cuts:
             # in 'cut', [0] is the key of the external activity, [1] is the module activity
-            if cut[1] == key and info == 'chain':
-                # the activity is being deleted, remove all cuts with this activity
+            if cut[1] == key_or_cut and src_info == 'chain':
+                # the activity is being deleted in chain, remove all cuts with this activity
+                self.get_modular_system.get_module(module_name).cuts.remove(cut)
+            elif cut == key_or_cut:
                 self.add_to_chain((module_name, cut[0]), update=False)
                 self.get_modular_system.get_module(module_name).cuts.remove(cut)
-            elif cut[0] == key:
-                # the right activity needs to be found and the cut deleted
-                self.add_to_chain((module_name, cut[0]), update=False)
-                self.get_modular_system.get_module(module_name).cuts.remove(cut)
-            elif cut[1] == key and info == cut[3]:
-                # the right cut needs to be found and then deleted
-                self.add_to_chain((module_name, cut[0]), update=False)
-                self.get_modular_system.get_module(module_name).cuts.remove(cut)
+
         if update:
             self.update_modular_system()
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
-    def alter_cut(self, module_):
+    def alter_cut(self, module_cut_new):
         """Alter cut product in cuts.
         Alters the cut product of a cut based on incoming data
 
-        module_old_new is a tuple with (module_name, old output, new output)
-        output consists of: (key, custom_name, amount)"""
-        #module_name, old_output, new_output = module_old_new
-        module_name, = module_
+        module_cut_new is a tuple with (module_name, cut, new name)"""
+        module_name, old_cut, new_name = module_cut_new
 
+        new_cut = (old_cut[0], old_cut[1], new_name, old_cut[3])
         for i, cut in enumerate(self.get_modular_system.get_module(module_name).cuts):
-            pass
+            if cut == old_cut:
+                self.get_modular_system.get_module(module_name).cuts[i] = new_cut
 
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()

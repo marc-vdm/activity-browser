@@ -233,36 +233,56 @@ class ModuleCutsTree(ABDictTreeView):
         )
         self.remove_cut_action.triggered.connect(self.remove_cut)
 
-        # make table editable
-        #self.setEditTriggers(QtWidgets.QTableView.DoubleClicked)
-        #self.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
-        #self.setItemDelegateForColumn(0, StringDelegate(self))
-
-
         self._connect_signals()
 
     def _connect_signals(self):
         super()._connect_signals()
+        self.doubleClicked.connect(self.on_double_click)
+
+    def on_double_click(self):
+        index = self.currentIndex()
+        col = index.column()
+        tree_level = self.tree_level()
+        if tree_level[0] == 'root' and col == 0:
+            # make cell editable
+            self.setEditTriggers(QtWidgets.QTableView.DoubleClicked)
+        else:
+            self.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 
     @property
     def selected_activity_key(self) -> str:
-        """ Return the activity name of the user-selected index.
+        """ Return the activity key of the user-selected index.
         """
         tree_level = self.tree_level()
         if tree_level[0] == 'leaf':
             return tree_level[1]
 
-    def tree_level(self, index=-1) -> tuple:
+    @property
+    def selected_activity_cut(self) -> tuple:
+        """ Return the cut of the user-selected index.
+        """
+        tree_level = self.tree_level(index=-1)
+        if tree_level[0] == 'leaf':
+            return tree_level[1]
+
+    def tree_level(self, index=-2, indexes=None) -> tuple:
         """Return tuple of (tree level, content)."""
-        indexes = self.selectedIndexes()
-        if indexes[1].data() != '':
-            # unhide and rehide 'key' column to extract the activity key
-            self.setColumnHidden(self.model.key_col, False)
+        if not indexes:
             indexes = self.selectedIndexes()
-            self.setColumnHidden(self.model.key_col, True)
-            return 'leaf', indexes[index].data()
+        if indexes[1].data() != '':
+            index = self.get_any_index(index)
+            return 'leaf', index.data()
         else:
             return 'root', indexes[0].data()
+
+    def get_any_index(self, index):
+        # unhide and rehide 'key' column to extract the activity key
+        self.setColumnHidden(self.model.key_col, False)
+        self.setColumnHidden(self.model.cut_col, False)
+        indexes = self.selectedIndexes()
+        self.setColumnHidden(self.model.key_col, True)
+        self.setColumnHidden(self.model.cut_col, True)
+        return indexes[index]
 
     def custom_view_sizing(self) -> None:
         self.setColumnHidden(self.model.key_col, True)
@@ -288,12 +308,11 @@ class ModuleCutsTree(ABDictTreeView):
             menu.exec_(event.globalPos())
 
     def remove_cut(self):
-        amt = self.tree_level(index=3)
-        mlca_signals.remove_from_cut.emit((self.model.module_name, self.selected_activity_key, amt[1]))
+        mlca_signals.remove_from_cut.emit((self.model.module_name, self.selected_activity_cut, 'cut tree view'))
 
     def update_tree(self):
         pass
-        if len(self.model.cut_products) == 0:
+        if len(self.model.full_cuts) == 0:
             self.hide()
         else:
             self.show()
