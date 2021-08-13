@@ -125,9 +125,10 @@ class mLCATab(QtWidgets.QWidget):
             if name not in msc.module_names:
                 msc.rename_module(module_name, name)
             else:
-                QtWidgets.QMessageBox.information(
-                    self.window, "Not possible", "A module with this name already exists."
-                )
+                if name != module_name:
+                    QtWidgets.QMessageBox.information(
+                        self.window, "Not possible", "A module with this name already exists."
+                    )
 
     def change_color_module_dialog(self, module_name):
         """Dialog to change the color of a module in the modular system"""
@@ -387,7 +388,8 @@ class ModuleWidget(QtWidgets.QWidget):
         if name not in msc.module_names:
             msc.rename_module(self.module_name, name)
         else:
-            print("Not possible", "A module with this name already exists.")
+            if name != self.module_name:
+                print("Not possible", "A module with this name already exists.")
 
     def change_module_color(self):
         mlca_signals.module_set_color.emit(self.module_name_field.text())
