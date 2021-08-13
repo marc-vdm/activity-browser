@@ -67,9 +67,11 @@ class mLCATab(QtWidgets.QWidget):
 
         if not no_modules:
             self.modular_database_widget.label_no_modules.hide()
+            self.modular_database_widget.graph_button.show()
             self.modular_database_widget.table.show()
         else:
             self.modular_database_widget.label_no_modules.show()
+            self.modular_database_widget.graph_button.hide()
             self.modular_database_widget.table.hide()
             self.module_widget.hide()
         self.resize_splitter()
@@ -285,12 +287,17 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_module_button.setToolTip('Add a new module')
 
+        self.graph_button = QtWidgets.QPushButton(qicons.graph_explorer, '')
+        self.graph_button.setToolTip('Show the modular system in the graph view\n'
+                                     "To see an individual module in the graph view, click the graph button in a Module overview below")
+
         self._construct_layout()
         self._connect_signals()
 
     def _connect_signals(self):
         mlca_signals.database_selected.connect(self.db_change)
         self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+        self.graph_button.clicked.connect(self.show_modular_system_in_graph)
 
     def db_change(self, selected):
         if selected:
@@ -308,6 +315,8 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         header_layout.addWidget(header("Modules:"))
         header_layout.addWidget(self.new_module_button)
         header_layout.addWidget(self.label_no_modules)
+        header_layout.addStretch()
+        header_layout.addWidget(self.graph_button)
         header_widget.setLayout(header_layout)
 
         # Overall Layout
@@ -316,6 +325,9 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         layout.addWidget(header_widget)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+    def show_modular_system_in_graph(self):
+        print('++ Graph view should be opened')
 
     def update_widget(self):
         self.show()
@@ -347,6 +359,11 @@ class ModuleWidget(QtWidgets.QWidget):
         self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off (default on)')
         self.output_scaling_checkbox.setChecked(True)
 
+        # graph button
+        self.graph_button = QtWidgets.QPushButton(qicons.graph_explorer, '')
+        self.graph_button.setToolTip('Show the module in the graph view\n'
+                                     "To see the modular system in the graph view, click the graph button above the 'Modules' table")
+
         self.construct_layout()
         self.connect_signals()
         self.hide()
@@ -360,13 +377,22 @@ class ModuleWidget(QtWidgets.QWidget):
         self.module_name_field.editingFinished.connect(self.module_name_change)
         self.module_color_editor.clicked.connect(self.change_module_color)
         self.output_scaling_checkbox.toggled.connect(self.output_based_scaling_editor)
+        self.graph_button.clicked.connect(self.show_module_in_graph)
 
     def construct_layout(self):
         # Overall Layout
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
         layout.addWidget(self.name_widget)
-        layout.addWidget(self.output_scaling_checkbox)
+
+        tools_layout = QtWidgets.QHBoxLayout()
+        tools_layout.addWidget(self.output_scaling_checkbox)
+        tools_layout.addStretch()
+        tools_layout.addWidget(self.graph_button)
+        tools_widget = QtWidgets.QWidget()
+        tools_widget.setLayout(tools_layout)
+        layout.addWidget(tools_widget)
+
         layout.addWidget(QtWidgets.QLabel('Outputs'))
         layout.addWidget(self.outputs_table)
         layout.addWidget(QtWidgets.QLabel('Chain'))
@@ -393,6 +419,10 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def change_module_color(self):
         mlca_signals.module_set_color.emit(self.module_name_field.text())
+
+    def show_module_in_graph(self):
+        print('++ Graph view should be opened')
+        #self.module
 
     def update_widget(self, module_name=''):
         self.module_name = module_name
