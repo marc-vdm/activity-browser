@@ -1,19 +1,23 @@
 from ...ui.tables.models.base import (
     PandasModel,
+    EditablePandasModel,
+    DragPandasModel,
     BaseTreeModel,
     TreeItem)
+
+from typing import Iterable
+
 import brightway2 as bw
 from activity_browser.signals import signals
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import QModelIndex, Qt
+from PySide2.QtCore import QModelIndex, Qt, Slot
 import pandas as pd
 from activity_browser.bwutils import AB_metadata
 
 from .mLCA_signals import mlca_signals
 from .modularsystem import modular_system_controller as msc
 
-class ModuleDatabaseModel(PandasModel):
+class ModuleDatabaseModel(DragPandasModel):
     """Contain data for all modules in the modular system database."""
     HEADERS = ["Name", "out/chain/cuts", "Outputs", "Cuts", "Chain"]
 
@@ -29,6 +33,25 @@ class ModuleDatabaseModel(PandasModel):
     def get_module_name(self, proxy: QModelIndex) -> str:
         idx = self.proxy_to_source(proxy)
         return self._dataframe.iat[idx.row(), 0]
+
+    def get_product_names(self, proxy: QModelIndex) -> str:
+        module_name = self.get_module_name(proxy)
+        for module in msc.get_raw_data:
+            if module['name'] == module_name:
+                break
+        return [o[1] for o in module['outputs']]
+
+    def get_unit_names(self, proxy: QModelIndex) -> str:
+        module_name = self.get_module_name(proxy)
+        for module in msc.get_raw_data:
+            if module['name'] == module_name:
+                break
+        keys = [o[0] for o in module['outputs']]
+        units = []
+        for key in keys:
+            activity = bw.get_activity(key)
+            units.append(activity.get('unit'))
+        return units
 
     def sync(self):
         data = []
@@ -292,3 +315,73 @@ class ModuleCutsModel(BaseTreeModel):
         # make tree
         self.setup_model_data()
         self.updated.emit()
+
+class CSModuleModel(EditablePandasModel):
+    HEADERS = [
+        "Amount", "Unit", "Product"
+    ]
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.current_cs = None
+        self.key_col = 0
+        self.product_col = 0
+        signals.calculation_setup_selected.connect(self.sync)
+        signals.databases_changed.connect(self.sync)
+        # after editing the model, signal that the calculation setup has changed.
+        self.dataChanged.connect(lambda: signals.calculation_setup_changed.emit())
+
+    @property
+    def products(self) -> list:
+        selection = self._dataframe.loc[:, ["Amount", "Product"]].to_dict(orient="records")
+        return [{x["key"]: x["Product"]} for x in selection]
+
+    def get_product(self, proxy: QModelIndex) -> tuple:
+        idx = self.proxy_to_source(proxy)
+        return self._dataframe.iat[idx.row(), self.product_col]
+
+    @Slot(str, name="syncModel")
+    def sync(self, name: str = None):
+        if self.current_cs is None and name is None:
+            raise ValueError("'name' cannot be None if no name is set")
+        if name:
+            assert name in bw.calculation_setups, "Given calculation setup does not exist."
+            self.current_cs = name
+
+        #fus = bw.calculation_setups.get(self.current_cs, {}).get('inv', [])
+        #df = pd.DataFrame([
+        #    self.build_row(key, amount) for func_unit in fus
+        #    for key, amount in func_unit.items()
+        #], columns=self.HEADERS + ["key"])
+        df = pd.DataFrame([], columns=self.HEADERS)
+
+        # Drop rows where the fu key was invalid in some way.
+        self._dataframe = df.dropna().reset_index(drop=True)
+        self.product_col = self._dataframe.columns.get_loc("Product")
+        self.updated.emit()
+
+    def build_row(self, product: str, unit: str, amount: float = 1.0) -> dict:
+
+        row ={"Product": product,
+              "Amount": amount,
+              "Unit": unit}
+        return row
+
+    @Slot(name="deleteRows")
+    def delete_rows(self, proxies: list) -> None:
+        indices = (self.proxy_to_source(p) for p in proxies)
+        rows = [i.row() for i in indices]
+        self._dataframe = self._dataframe.drop(rows, axis=0).reset_index(drop=True)
+        self.updated.emit()
+        signals.calculation_setup_changed.emit()  # Trigger update of CS in brightway
+
+    def include_products(self, new_products: Iterable) -> None:
+        existing = list(self._dataframe.loc[:, "Product"])
+        data = []
+        for product in (p for p in new_products if p not in existing):
+            unit, amount = new_products[product]
+            data.append(self.build_row(product, unit, amount))
+        if data:
+            self._dataframe = self._dataframe.append(data, ignore_index=True)
+            self.updated.emit()
+            signals.calculation_setup_changed.emit()

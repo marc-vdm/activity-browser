@@ -4,13 +4,14 @@ from .mLCA_table_models import (
     ModuleDatabaseModel,
     ModuleChainModel,
     ModuleOutputsModel,
-    ModuleCutsModel)
+    ModuleCutsModel,
+    CSModuleModel)
 from .mLCA_signals import mlca_signals
 
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtCore
+from PySide2.QtCore import Slot
 from activity_browser.signals import signals
 
-#from .delegates import *
 from activity_browser.ui.tables.delegates import *
 
 class ModuleDatabaseTable(ABDataFrameView):
@@ -38,7 +39,12 @@ class ModuleDatabaseTable(ABDataFrameView):
         )
 
         self.model = ModuleDatabaseModel(parent=self)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QtWidgets.QTableView.DragOnly)
+
         self._connect_signals()
+
+        self.table_name = 'modules'
 
     def _connect_signals(self):
         #TODO link these signals
@@ -76,6 +82,12 @@ class ModuleDatabaseTable(ABDataFrameView):
         """ Return the database name of the user-selected index.
         """
         return self.model.get_module_name(self.currentIndex())
+
+    def get_products(self, proxy: QtCore.QModelIndex) -> tuple:
+        return self.model.get_product_names(proxy)
+
+    def get_units(self, proxy: QtCore.QModelIndex) -> tuple:
+        return self.model.get_unit_names(proxy)
 
 class GenericModuleTable(ABDataFrameView):
     """ TODO description
@@ -316,3 +328,54 @@ class ModuleCutsTree(ABDictTreeView):
             self.hide()
         else:
             self.show()
+
+class CSModuleTable(ABDataFrameView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QtWidgets.QTableView.DropOnly)
+        self.model = CSModuleModel(self)
+        self.setItemDelegateForColumn(0, FloatDelegate(self))
+        self.model.updated.connect(self.update_proxy_model)
+        self.model.updated.connect(self.custom_view_sizing)
+
+    @Slot(name="resizeView")
+    def custom_view_sizing(self):
+        self.setColumnHidden(6, True)
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+
+    @Slot(name="deleteRows")
+    def delete_rows(self):
+        self.model.delete_rows(self.selectedIndexes())
+
+    def to_python(self) -> list:
+        return self.model.activities
+
+    def contextMenuEvent(self, a0) -> None:
+        menu = QtWidgets.QMenu()
+        menu.addAction(qicons.delete, "Remove row", self.delete_rows)
+        menu.exec_(a0.globalPos())
+
+    def dragEnterEvent(self, event):
+        if isinstance(event.source(), ModuleDatabaseTable):
+            event.accept()
+
+    def dragMoveEvent(self, event) -> None:
+        pass
+
+    def dropEvent(self, event):
+        event.accept()
+        source = event.source()
+        products = []
+        units = []
+        include_products = {}
+        for src in source.selectedIndexes():
+            for product in source.get_products(src):
+                products.append(product)
+            for unit in source.get_units(src):
+                units.append(unit)
+        for product, unit in zip(products, units):
+            include_products[product] = (unit, 1.0)
+
+        self.model.include_products(include_products)
