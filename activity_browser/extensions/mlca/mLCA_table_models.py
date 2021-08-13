@@ -196,47 +196,27 @@ class ModuleCutsModel(BaseTreeModel):
         self._dataframe = None
         self.key_col = 0
         self.cut_col = 0
-        self.cut_products = []
+        self.full_cuts = []
         self.module_name = None
 
         self.setup_model_data()
         self.connect_signals()
 
-    #def flags(self, index):
-    #    """ Returns ItemIsEditable flag
-    #    """
-    #    return super().flags(index) | Qt.ItemIsEditable
+    def flags(self, index):
+        """ Returns ItemIsEditable flag
+        """
+        return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value, role=Qt.EditRole):
         """Whenever data is changed, call an update to the relevant exchange
                 or activity.
                 """
-        #idx_ch = index.child(index.row()+1, index.column())
-
-        #idx_ch1 = index.child(0, -1).data()
-        #idx_ch2 = index.child(1, -1).data()
-
-        #idx_ch.text()
-        #print(value, index.row(), index.column(), type(idx_ch), idx_ch.data())
-        #print(idx_ch1, idx_ch2)
-
-
-        #key = self.get_activity_key(index)
-        #custom_name = self._dataframe.iat[index.row(), 0]
-        #amount = self._dataframe.iat[index.row(), 1]
-        #old_output = (key, custom_name, amount)
-
-        #header = self._dataframe.columns[index.column()]
-        #if header == 'custom name':
-        #    custom_name = value
-        #elif header == 'quantity':
-        #    amount = value
-
-        #new_output = (key, custom_name, amount)
-
-        #if old_output != new_output:
-        #    module_old_new = (self.module_name, old_output, new_output)
-        #    mlca_signals.alter_output.emit(module_old_new)
+        # go to the first child of the root(cut name), and get product/name/location/amt and filter DF to get cut
+        cut = self._dataframe[(self._dataframe["product"] == index.child(0, 0).data()) &
+                              (self._dataframe["name"] == index.child(0, 1).data()) &
+                              (self._dataframe["location"] == index.child(0, 2).data()) &
+                              (self._dataframe["amount"] == index.child(0, 3).data())]['cut'].to_list()[0]
+        mlca_signals.alter_cut.emit((self.module_name, cut, value))
         return True
 
     def connect_signals(self):
@@ -252,14 +232,13 @@ class ModuleCutsModel(BaseTreeModel):
 
         Trigger this at the start and when a method is added/deleted.
         """
-        for product in self.cut_products:
+        for cut in self.full_cuts:
             # set first branch level as name
             prod_branch = ['' for i in range(len(self.HEADERS)-2)]  # change 2 to as many columns are hidden
-            prod_branch[0] = product.split('::')[-2]
-            #prod_branch = ModuleCutsItem.build_item(prod_branch, self.root)
+            prod_branch[0] = cut[2]
             prod_branch = ModuleCutsItem.build_item(prod_branch, self.root)
             # set leaves with data
-            data = self._dataframe[self._dataframe["cut"] == product]
+            data = self._dataframe[self._dataframe["cut"] == cut]
             for _, row in data.iterrows():
                 ModuleCutsItem.build_item(row.to_list(), prod_branch)
 
@@ -278,20 +257,17 @@ class ModuleCutsModel(BaseTreeModel):
 
         # check if there are cuts, if not, skip further actions
         if len(cuts) == 0:
-            self.cut_products = []
+            self.full_cuts = []
             self.updated.emit()
             return
 
         output_keys = []
-        c = 0
-        cut_products = set()
+        full_cuts = set()
         for cut in cuts:
-            c += 1
             for key in cut[0:-2]:
-                _cut = str(cut[-2] + '::' + str(c))
-                output_keys.append((key, _cut, cut[-1]))
-                cut_products.add(_cut)
-        self.cut_products = list(cut_products)
+                output_keys.append((key, cut, cut[-1]))  # (key, unique id for every cut, amount)
+                full_cuts.add(cut)
+        self.full_cuts = list(full_cuts)
 
         data = []
         for cut_key, cut, amount in output_keys:
