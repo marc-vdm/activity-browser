@@ -14,7 +14,7 @@ class LeftPanel(ABTab):
             "Project": ProjectTab(self),
             "Impact Categories": MethodsTab(self),
             "History": HistoryTab(self),
-            "mLCA": mLCATab(self),
+            "Modular System": mLCATab(self),
         }
         for tab_name, tab in self.tabs.items():
             self.addTab(tab, tab_name)

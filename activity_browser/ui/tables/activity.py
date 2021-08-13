@@ -240,7 +240,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
             mlca_signals.replace_output.emit((module[0], key))
         elif module[1] == 'chain':
             mlca_signals.add_to_chain.emit((module[0], key))
-        signals.show_tab.emit("mLCA")
+        signals.show_tab.emit("Modular System")
 
     def dragEnterEvent(self, event):
         """ Accept exchanges from a technosphere database table, and the
@@ -368,4 +368,4 @@ class DownstreamExchangeTable(BaseExchangeTable):
             mlca_signals.replace_output.emit((module[0], key))
         elif module[1] == 'chain':
             mlca_signals.add_to_chain.emit((module[0], key))
-        signals.show_tab.emit("mLCA")
+        signals.show_tab.emit("Modular System")
