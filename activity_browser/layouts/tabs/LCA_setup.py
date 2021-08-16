@@ -16,7 +16,7 @@ from ...ui.style import horizontal_line, header, style_group_box
 from ...ui.tables import (
     CSActivityTable, CSList, CSMethodsTable, PresamplesList, ScenarioImportTable
 )
-from activity_browser.extensions.mlca.mLCA_tables import CSModuleTable
+
 from ...ui.widgets import ExcelReadDialog
 from .base import BaseRightTab
 
@@ -90,7 +90,6 @@ class LCASetupTab(QtWidgets.QWidget):
     DEFAULT = 0
     SCENARIOS = 1
     PRESAMPLES = 2
-    MLCA = 3
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -101,8 +100,6 @@ class LCASetupTab(QtWidgets.QWidget):
         self.scenario_panel.hide()
 
         self.activities_table = CSActivityTable(self)
-        self.modules_table = CSModuleTable(self)
-        self.modules_table.hide()
         self.methods_table = CSMethodsTable(self)
         self.list_widget = CSList(self)
 
@@ -111,7 +108,7 @@ class LCASetupTab(QtWidgets.QWidget):
         self.rename_cs_button = QtWidgets.QPushButton(qicons.edit, "Rename")
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.calculation_type = QtWidgets.QComboBox()
-        self.calculation_type.addItems(["Standard LCA", "Scenario LCA", "Presamples LCA", "Modular LCA"])
+        self.calculation_type.addItems(["Standard LCA", "Scenario LCA", "Presamples LCA"])
         # default
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         # presamples
@@ -126,9 +123,6 @@ class LCASetupTab(QtWidgets.QWidget):
         # scenarios
         self.scenario_calc_btn = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.scenario_calc_btn.hide()
-        # mlca
-        self.mlca_calc_btn = QtWidgets.QPushButton(qicons.calculate, "Calculate")
-        self.mlca_calc_btn.hide()
 
         name_row = QtWidgets.QHBoxLayout()
         name_row.addWidget(header('Calculation Setup:'))
@@ -143,7 +137,6 @@ class LCASetupTab(QtWidgets.QWidget):
         calc_row.addWidget(self.calculate_button)
         calc_row.addWidget(self.presamples.button)
         calc_row.addWidget(self.scenario_calc_btn)
-        calc_row.addWidget(self.mlca_calc_btn)
 
         calc_row.addWidget(self.calculation_type)
         calc_row.addWidget(self.presamples.label)
@@ -156,13 +149,9 @@ class LCASetupTab(QtWidgets.QWidget):
         container.addLayout(calc_row)
         container.addWidget(horizontal_line())
 
-        self.default_reference_flow_header = header('Reference flows:')
-        self.mlca_reference_flow_header = header('Modules:')
-        self.mlca_reference_flow_header.hide()
-        cs_panel_layout.addWidget(self.default_reference_flow_header)
-        cs_panel_layout.addWidget(self.mlca_reference_flow_header)
+        self.reference_flow_header = header('Reference flows:')
+        cs_panel_layout.addWidget(self.reference_flow_header)
         cs_panel_layout.addWidget(self.activities_table)
-        cs_panel_layout.addWidget(self.modules_table)
         cs_panel_layout.addWidget(header('Impact categories:'))
         cs_panel_layout.addWidget(self.methods_table)
 
@@ -180,7 +169,6 @@ class LCASetupTab(QtWidgets.QWidget):
         self.presamples.button.clicked.connect(self.presamples_calculation)
         self.presamples.remove.clicked.connect(self.remove_presamples_package)
         self.scenario_calc_btn.clicked.connect(self.scenario_calculation)
-        self.mlca_calc_btn.clicked.connect(self.mlca_calculation)
 
         self.new_cs_button.clicked.connect(signals.new_calculation_setup.emit)
         self.copy_cs_button.clicked.connect(
@@ -245,13 +233,6 @@ class LCASetupTab(QtWidgets.QWidget):
         data = self.scenario_panel.combined_dataframe()
         signals.lca_scenario_calculation.emit(self.list_widget.name, data)
 
-    @Slot(name="calculationMLCA")
-    def mlca_calculation(self) -> None:
-        """Construct index / value array and begin LCA calculation."""
-        print('++ An MLCA calculation would now be started')
-        #data = self.scenario_panel.combined_dataframe()
-        #signals.lca_scenario_calculation.emit(self.list_widget.name, data)
-
     @Slot(name="toggleDefaultCalculation")
     def set_default_calculation_setup(self):
         self.calculation_type.setCurrentIndex(0)
@@ -290,11 +271,6 @@ class LCASetupTab(QtWidgets.QWidget):
                 obj.hide()
             self.scenario_calc_btn.hide()
             self.scenario_panel.hide()
-            self.mlca_calc_btn.hide()
-            self.default_reference_flow_header.show()
-            self.mlca_reference_flow_header.hide()
-            self.activities_table.show()
-            self.modules_table.hide()
         elif index == self.SCENARIOS:
             # Scenario LCA
             self.calculate_button.hide()
@@ -302,11 +278,6 @@ class LCASetupTab(QtWidgets.QWidget):
                 obj.hide()
             self.scenario_calc_btn.show()
             self.scenario_panel.show()
-            self.mlca_calc_btn.hide()
-            self.default_reference_flow_header.show()
-            self.mlca_reference_flow_header.hide()
-            self.activities_table.show()
-            self.modules_table.hide()
         elif index == self.PRESAMPLES:
             # Presamples / Scenarios LCA
             self.calculate_button.hide()
@@ -314,23 +285,6 @@ class LCASetupTab(QtWidgets.QWidget):
                 obj.show()
             self.scenario_calc_btn.hide()
             self.scenario_panel.hide()
-            self.mlca_calc_btn.hide()
-            self.default_reference_flow_header.show()
-            self.mlca_reference_flow_header.hide()
-            self.activities_table.show()
-            self.modules_table.hide()
-        elif index == self.MLCA:
-            # Modular LCA
-            self.calculate_button.hide()
-            for obj in self.presamples:
-                obj.hide()
-            self.scenario_calc_btn.hide()
-            self.scenario_panel.hide()
-            self.mlca_calc_btn.show()
-            self.default_reference_flow_header.hide()
-            self.mlca_reference_flow_header.show()
-            self.activities_table.hide()
-            self.modules_table.show()
         self.cs_panel.updateGeometry()
 
     def enable_calculations(self):

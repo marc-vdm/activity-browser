@@ -10,6 +10,7 @@ from .impact_categories import MethodsTable, MethodsTree
 from .models import CSMethodsModel, CSActivityModel, ScenarioImportModel
 from .views import ABDataFrameView
 
+from activity_browser.extensions.mlca import mLCA_tables
 
 class CSList(QtWidgets.QComboBox):
     def __init__(self, parent=None):
@@ -73,6 +74,8 @@ class CSActivityTable(ABDataFrameView):
 
     def dragEnterEvent(self, event):
         if getattr(event.source(), "technosphere", False):
+            event.accept()
+        elif isinstance(event.source(), mLCA_tables.ModuleOutputsTable):
             event.accept()
 
     def dragMoveEvent(self, event) -> None:
