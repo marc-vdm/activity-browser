@@ -1,15 +1,14 @@
 from activity_browser.ui.tables.views import ABDataFrameView, ABDictTreeView
 from activity_browser.ui.icons import qicons
+
 from .mLCA_table_models import (
     ModuleDatabaseModel,
     ModuleChainModel,
     ModuleOutputsModel,
-    ModuleCutsModel,
-    CSModuleModel)
+    ModuleCutsModel)
 from .mLCA_signals import mlca_signals
 
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Slot
 from activity_browser.signals import signals
 
 from activity_browser.ui.tables.delegates import *
@@ -118,9 +117,9 @@ class GenericModuleTable(ABDataFrameView):
         #mlca_signals.module_selected.connect(self.update_table)
 
         self.open_activity_action.triggered.connect(
-            lambda: signals.open_activity_tab.emit(self.selected_activity_key))
+            lambda: signals.open_activity_tab.emit(self.get_selected_key))
         self.open_graph_action.triggered.connect(
-            lambda: signals.open_activity_graph_tab.emit(self.selected_activity_key))
+            lambda: signals.open_activity_graph_tab.emit(self.get_selected_key))
         self.remove_activity_action.triggered.connect(self.remove_activity)
 
         self.model.updated.connect(self.update_proxy_model)
@@ -134,10 +133,15 @@ class GenericModuleTable(ABDataFrameView):
         menu.exec_(event.globalPos())
 
     @property
-    def selected_activity_key(self) -> str:
-        """ Return the activity name of the user-selected index.
+    def get_selected_key(self) -> tuple:
+        """ Return the activity key of the current index.
         """
         return self.model.get_activity_key(self.currentIndex())
+
+    def get_key(self, index=None) -> tuple:
+        """ Return the activity key of the dragged index (for adding key to calculation setup).
+        """
+        return self.model.get_activity_key(index)
 
     def custom_view_sizing(self) -> None:
         self.setColumnHidden(self.model.key_col, True)
@@ -158,6 +162,9 @@ class ModuleOutputsTable(GenericModuleTable):
         super().__init__(parent)
 
         self.model = ModuleOutputsModel(parent=self)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QtWidgets.QTableView.DragOnly)
+
         self._connect_signals()
 
         self.remove_output_action = QtWidgets.QAction(
@@ -214,13 +221,13 @@ class ModuleChainTable(GenericModuleTable):
         menu.exec_(event.globalPos())
 
     def add_output(self):
-        mlca_signals.add_to_output.emit((self.model.module_name, self.selected_activity_key))
+        mlca_signals.add_to_output.emit((self.model.module_name, self.get_selected_key))
 
     def add_cut(self):
-        mlca_signals.add_to_cut.emit((self.model.module_name, self.selected_activity_key))
+        mlca_signals.add_to_cut.emit((self.model.module_name, self.get_selected_key))
 
     def remove_activity(self):
-        mlca_signals.remove_from_chain.emit((self.model.module_name, self.selected_activity_key))
+        mlca_signals.remove_from_chain.emit((self.model.module_name, self.get_selected_key))
 
 class ModuleCutsTree(ABDictTreeView):
     """ TODO description
@@ -262,7 +269,7 @@ class ModuleCutsTree(ABDictTreeView):
             self.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 
     @property
-    def selected_activity_key(self) -> str:
+    def get_selected_key(self) -> str:
         """ Return the activity key of the user-selected index.
         """
         tree_level = self.tree_level()
@@ -270,7 +277,7 @@ class ModuleCutsTree(ABDictTreeView):
             return tree_level[1]
 
     @property
-    def selected_activity_cut(self) -> tuple:
+    def get_selected_cut(self) -> tuple:
         """ Return the cut of the user-selected index.
         """
         tree_level = self.tree_level(index=-1)
@@ -304,23 +311,23 @@ class ModuleCutsTree(ABDictTreeView):
         ))
 
     def contextMenuEvent(self, event) -> None:
-        if self.selected_activity_key:
+        if self.get_selected_key:
             menu = QtWidgets.QMenu(self)
             menu.addAction(
                 qicons.right, "Open activity",
                 lambda: signals.open_activity_tab.emit(
-                    self.selected_activity_key)
+                    self.get_selected_key)
             )
             menu.addAction(
                 qicons.graph_explorer, "Open in Graph Explorer",
                 lambda: signals.open_activity_graph_tab.emit(
-                    self.selected_activity_key)
+                    self.get_selected_key)
             )
             menu.addAction(self.remove_cut_action)
             menu.exec_(event.globalPos())
 
     def remove_cut(self):
-        mlca_signals.remove_from_cut.emit((self.model.module_name, self.selected_activity_cut, 'cut tree view'))
+        mlca_signals.remove_from_cut.emit((self.model.module_name, self.get_selected_cut, 'cut tree view'))
 
     def update_tree(self):
         pass
@@ -328,54 +335,3 @@ class ModuleCutsTree(ABDictTreeView):
             self.hide()
         else:
             self.show()
-
-class CSModuleTable(ABDataFrameView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAcceptDrops(True)
-        self.setDragDropMode(QtWidgets.QTableView.DropOnly)
-        self.model = CSModuleModel(self)
-        self.setItemDelegateForColumn(0, FloatDelegate(self))
-        self.model.updated.connect(self.update_proxy_model)
-        self.model.updated.connect(self.custom_view_sizing)
-
-    @Slot(name="resizeView")
-    def custom_view_sizing(self):
-        self.setColumnHidden(6, True)
-        self.resizeColumnsToContents()
-        self.resizeRowsToContents()
-
-    @Slot(name="deleteRows")
-    def delete_rows(self):
-        self.model.delete_rows(self.selectedIndexes())
-
-    def to_python(self) -> list:
-        return self.model.activities
-
-    def contextMenuEvent(self, a0) -> None:
-        menu = QtWidgets.QMenu()
-        menu.addAction(qicons.delete, "Remove row", self.delete_rows)
-        menu.exec_(a0.globalPos())
-
-    def dragEnterEvent(self, event):
-        if isinstance(event.source(), ModuleDatabaseTable):
-            event.accept()
-
-    def dragMoveEvent(self, event) -> None:
-        pass
-
-    def dropEvent(self, event):
-        event.accept()
-        source = event.source()
-        products = []
-        units = []
-        include_products = {}
-        for src in source.selectedIndexes():
-            for product in source.get_products(src):
-                products.append(product)
-            for unit in source.get_units(src):
-                units.append(unit)
-        for product, unit in zip(products, units):
-            include_products[product] = (unit, 1.0)
-
-        self.model.include_products(include_products)
