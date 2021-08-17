@@ -8,7 +8,9 @@ from collections import namedtuple
 import traceback
 from typing import List, Optional, Union
 
+import pandas as pd
 from bw2calc.errors import BW2CalcError
+import brightway2 as bw
 from PySide2.QtWidgets import (
     QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QRadioButton,
     QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QTableView,
@@ -31,6 +33,8 @@ from ...ui.style import horizontal_line, vertical_line, header
 from ...ui.tables import ContributionTable, InventoryTable, LCAResultsTable
 from ...ui.widgets import CutoffMenu, SwitchComboBox
 from ...ui.web import SankeyNavigatorWidget
+
+from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
 
 
 def get_header_layout(header_text: str) -> QVBoxLayout:
@@ -93,6 +97,7 @@ class LCAResultsSubTab(QTabWidget):
         self.method_dict = dict()
         self.single_func_unit = False
         self.single_method = False
+        self.modular_lca = False
 
         self.setMovable(True)
         self.setVisible(False)
@@ -158,6 +163,22 @@ class LCAResultsSubTab(QTabWidget):
             except KeyError as e:
                 raise BW2CalcError("LCA Failed", str(e)).with_traceback(e.__traceback__)
         self.mlca.calculate()
+
+        #check for modular system in the selected reference flows
+        functional_units = bw.calculation_setups[self.cs_name]['inv']
+        functional_units = [(list(fu.keys())[0], list(fu.values())[0]) for fu in functional_units]
+        product_amount = set()
+        for key, amount in functional_units:
+            if key in msc.outputs.keys():
+                for _, output in msc.outputs[key]:
+                    product_amount.add((output[1], amount))
+        product_amount = list(product_amount)
+        if len(product_amount) > 0:
+            self.modular_lca = True
+            methods = bw.calculation_setups[self.cs_name]['ia']
+            msc.modular_LCA(methods, product_amount)
+
+
         self.mc = MonteCarloLCA(self.cs_name)
 
         # self.mct = CSMonteCarloLCAThread()
@@ -988,10 +1009,77 @@ class ProcessContributionsTab(ContributionTab):
 
     def update_dataframe(self, *args, **kwargs):
         """Retrieve the top process contributions"""
-        return self.parent.contributions.top_process_contributions(
-            **kwargs, limit=self.cutoff_menu.cutoff_value,
-            limit_type=self.cutoff_menu.limit_type, normalize=self.relative
-        )
+        # add or remove the 'modules' option if required
+        if self.parent.modular_lca:
+            if self.switches.currentText() == 'Impact Categories' and \
+                    'module' in self.combobox_menu.agg.itemText(self.combobox_menu.agg.count() - 1):
+                self.combobox_menu.agg.setCurrentIndex(0)
+                self.combobox_menu.agg.removeItem(self.combobox_menu.agg.count() - 1)
+                self.combobox_menu.agg.removeItem(self.combobox_menu.agg.count() - 1)
+            else:
+                if 'module' not in self.combobox_menu.agg.itemText(self.combobox_menu.agg.count() - 1):
+                    self.combobox_menu.agg.addItems(['module names'])
+                    self.combobox_menu.agg.addItems(['module products'])
+
+        if self.parent.modular_lca and 'module' in self.combobox_menu.agg.currentText():
+            df = self.get_modular_df(*args, **kwargs)
+        else:
+            df = self.parent.contributions.top_process_contributions(
+                **kwargs, limit=self.cutoff_menu.cutoff_value,
+                limit_type=self.cutoff_menu.limit_type, normalize=self.relative
+            )
+        return df
+
+    def get_modular_df(self, *args, **kwargs) -> pd.DataFrame:
+
+        method = self.combobox_menu.method.currentText()
+        if self.relative:
+            abs_rel = 'rel'
+        else:
+            abs_rel = 'abs'
+        limit = self.cutoff_menu.cutoff_value
+        limit_type = self.cutoff_menu.limit_type
+
+        df = msc.lca_result_by_module
+        # filter on names or products
+        if self.combobox_menu.agg.currentText() == 'module names':
+            df = df[df['prod_mod'] == 'name']
+        elif self.combobox_menu.agg.currentText() == 'module products':
+            df = df[df['prod_mod'] == 'product']
+        # filter on method
+        df = df[df['method'] == method]
+        # get totals
+        sum_columns = list(df.columns)[7:]
+        meta_columns = list(df.columns)[:7]
+        columns = list(df.columns)
+        totals = list(df[df['abs_rel'] == abs_rel][sum_columns].sum(axis=0))
+        totals = {k: v for k, v in zip(sum_columns, totals)}
+        totals_row = {meta_columns: '' for meta_columns in meta_columns}
+        totals_row['index'] = 'Total'
+        totals_row = dict(totals_row, **totals)
+        # filter out items that do not pass the limit
+        if limit_type == 'percent':
+            pass #TODO
+        elif limit_type == 'number':
+            if df.shape[0] > limit:
+                pass #TODO
+        # filter on absolute/relative
+        df = df[df['abs_rel'] == abs_rel]
+        # add the totals and rest columns
+        totals_row = pd.DataFrame([totals_row], columns=columns)
+        df = pd.concat([totals_row, df])
+        #TODO add rest
+
+        # sort data large > small
+        #TODO
+
+
+
+
+
+        # remove the method, abs_rel and prod_mod columns
+        df.drop(['method', 'abs_rel', 'prod_mod'], axis=1, inplace=True)
+        return df
 
 
 class CorrelationsTab(NewAnalysisTab):

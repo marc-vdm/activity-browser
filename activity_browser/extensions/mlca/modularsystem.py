@@ -4,6 +4,7 @@ import itertools
 import pickle
 import networkx as nx  # TODO: get rid of this dependency
 import numpy as np
+import pandas as pd
 
 from PySide2 import QtWidgets
 
@@ -180,11 +181,11 @@ class ModularSystem(object):
 
     # METHODS THAT RETURN DATA FOR A SUBSET OR THE ENTIRE MODULAR SYSTEM
 
-    def get_module(self, module_name):
+    def get_module(self, module_name) -> Module:
         if module_name in self.modules:
             return self.map_name_module.get(module_name, None)
 
-    def get_modules(self, module_list=None):
+    def get_modules(self, module_list=None) -> list:
         """
         Returns a list of modules.
 
@@ -297,7 +298,7 @@ class ModularSystem(object):
                 visited += [current_node]
             if current_node in self.products:
                 # go up to all modules if none has been visited previously, else go down
-                upstream_processes = G.predecessors(current_node)
+                upstream_processes = list(G.predecessors(current_node))
                 if upstream_processes and not [process for process in upstream_processes if process in visited]:
                     parents += [current_node]
                     for process in upstream_processes:
@@ -366,13 +367,13 @@ class ModularSystem(object):
         except AssertionError:
             print("Product-Process Matrix must be square! Currently", matrix.shape[0], 'products and', matrix.shape[1], 'modules.')
 
-    def lca_modules(self, method, process_names=None, factorize=False):
+    def lca_modules(self, method, module_names=None, factorize=False):
         """Returns a dictionary where *keys* = module name, *value* = LCA score
         """
         return dict([(module.name, module.lca(method, factorize=factorize))
-                     for module in self.get_modules(process_names)])
+                     for module in self.get_modules(module_names)])
 
-    def lca_linked_modules(self, method, process_names, demand):
+    def lca_linked_modules(self, method, module_names, demand):
         """
         Performs LCA for a given demand from a linked modular system.
         Works only for square matrices (see scaling_vector_foreground_demand).
@@ -383,37 +384,37 @@ class ModularSystem(object):
         * *demand*: product demand
         * *scaling vector*: result of the demand
         * *LCIA method*: method used
-        * *process contribution*: contribution of each process
-        * *relative process contribution*: relative contribution
+        * *module contribution*: contribution of each process
+        * *relative module contribution*: relative contribution
         * *LCIA score*: LCA result
 
         Args:
 
         * *method*: LCIA method
-        * *process_names*: selection of modules from the linked modular system (that yields a square matrix)
+        * *module_names*: selection of modules from the linked modular system (that yields a square matrix)
         * *demand* (dict): keys: product names, values: amount
         """
-        scaling_dict = self.scaling_vector_foreground_demand(process_names, demand)
+        scaling_dict = self.scaling_vector_foreground_demand(module_names, demand)
         if not scaling_dict:
             return
-        lca_scores = self.lca_modules(method, process_names)
+        lca_scores = self.lca_modules(method, module_names)
         # multiply scaling vector with process LCA scores
         path_lca_score = 0.0
-        process_contribution = {}
-        for process, amount in scaling_dict.items():
-            process_contribution.update({process: amount*lca_scores[process]})
-            path_lca_score = path_lca_score + amount*lca_scores[process]
-        process_contribution_relative = {}
-        for process, amount in scaling_dict.items():
-            process_contribution_relative.update({process: amount*lca_scores[process]/path_lca_score})
+        module_contribution = {}
+        for module, amount in scaling_dict.items():
+            module_contribution.update({module: amount*lca_scores[module]})
+            path_lca_score = path_lca_score + amount*lca_scores[module]
+        module_contribution_relative = {}
+        for module, amount in scaling_dict.items():
+            module_contribution_relative.update({module: amount*lca_scores[module]/path_lca_score})
 
         output = {
-            'path': process_names,
+            'path': module_names,
             'demand': demand,
             'scaling vector': scaling_dict,
             'LCIA method': method,
-            'process contribution': process_contribution,
-            'relative process contribution': process_contribution_relative,
+            'module contribution': module_contribution,
+            'relative module contribution': module_contribution_relative,
             'LCA score': path_lca_score,
         }
         return output
@@ -432,9 +433,10 @@ class ModularSystem(object):
             print('\nCannot calculate LCAs for alternatives as system contains ' \
                   'loops (', self.has_loops, ') / multi-output modules (', self.has_multi_output_processes, ').')
         else:
+            #TODO fix:
             # assume that only one product is demanded for now (functional unit)
             path_lca_data = []
-            for path in self.all_pathways(demand.keys()[0]):
+            for path in self.all_pathways(list(demand.keys())[0]):
                 path_lca_data.append(self.lca_linked_modules(method, path, demand))
             return path_lca_data
 
@@ -448,8 +450,10 @@ class ModularSystemController(object):
 
         self.modular_system = None
         self.raw_data = None
+        self.outputs = None
         self.affected_activities = None
         self.related_activities = None
+        self.lca_result_by_module = None
 
         self.modular_system_path
         self.module_names
@@ -459,8 +463,9 @@ class ModularSystemController(object):
     def connect_signals(self):
         signals.project_selected.connect(self.project_change)
         mlca_signals.copy_module.connect(self.copy_module)
-        mlca_signals.module_db_changed.connect(self.get_related_activities)
+        mlca_signals.module_db_changed.connect(self.get_outputs)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
+        mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_set_obs.connect(self.set_output_based_scaling)
 
         mlca_signals.add_to_chain.connect(self.add_to_chain)
@@ -491,7 +496,7 @@ class ModularSystemController(object):
         pass
 
     @property
-    def get_modular_system(self, path=None, force_open=False):
+    def get_modular_system(self, path=None, force_open=False) -> ModularSystem:
         """Load modular system from file and return the modular system object."""
         if not path:
             path = self.modular_system_path
@@ -505,8 +510,10 @@ class ModularSystemController(object):
             self.modular_system = modular_system
             # load raw data too
             self.raw_data = self.modular_system.raw_data
-            self.get_related_activities()
+            # load metadata
+            self.get_outputs()
             self.get_affected_activities()
+            self.get_related_activities()
             return self.modular_system
 
     @property
@@ -757,6 +764,19 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
+    def get_outputs(self):
+        """Dict of all output activities in modular system, by key."""
+        outputs = {}
+        for module in self.get_raw_data:
+            _outputs = module['outputs']
+            for output in _outputs:
+                key = output[0]
+                if outputs.get(key, False):
+                    outputs[key].append(module['name'])
+                else:
+                    outputs[key] = [(module['name'], output)]
+        self.outputs = outputs
+
     def get_affected_activities(self):
         """Dict of all activities in module, by module."""
         aa = {}
@@ -824,5 +844,122 @@ class ModularSystemController(object):
         if not os.path.isfile(ms_file):
             ModularSystem().save_to_file(filepath=ms_file)
         return ms_file
+
+    def modular_LCA(self, methods, product_amount):
+        """Get modular LCA results for all relevant pathways"""
+        demand = {}
+        for module, amount in product_amount:
+            demand[module] = amount
+
+        lca_result = {}
+        data = []
+        for method in methods:
+            method_result = {}
+
+            results = self.get_modular_system.lca_alternatives(method, demand)
+            _data, paths = self.format_results(results)
+            data += _data
+
+        meta_headers = ['method',
+                        'abs_rel',
+                        'prod_mod',
+                        'index',
+                        'reference product',
+                        'name',
+                        'location',
+                        'database']
+        headers = meta_headers + paths
+        df = pd.DataFrame(data, columns=headers).sort_values(['index', 'reference product'])
+
+        self.lca_result_by_module = df
+
+    def format_results(self, results, by='module name'):
+        data = []
+        prod_mods = []
+
+        abs_line_dict = {}
+        rel_line_dict = {}
+        paths = []
+        products = set()
+
+        # get some required data
+        for result in results:
+            readable_path = ''
+            for i in range(0, len(result['path']), 2):
+                readable_path += result['path'][i + 1] + ' - ' + result['path'][i] + ' | '
+                product_name = result['path'][i]
+                module_name = result['path'][i + 1]
+                prod_mod = (product_name, module_name)
+                products.add(product_name)
+                if prod_mod not in prod_mods:
+                    prod_mods.append(prod_mod)
+            paths.append(readable_path)
+
+            result['path'] = readable_path
+        method = result['LCIA method'] # method does not change in one set of results
+
+        # assemble lines
+
+        # pre assembly of products
+        product_lines_abs = {}
+        product_lines_rel = {}
+        for product_name in list(products):
+            meta_line_dict = {'method': ', '.join(method),
+                              'abs_rel': 'abs',
+                              'prod_mod': 'product',
+                              'index': product_name,  # product name
+                              'reference product': '',  # module product
+                              'name': '',  # activity name
+                              'location': '',  # activity location
+                              'database': '',  # activity database
+                              }
+            product_paths = dict({p: 0 for p in paths}, **meta_line_dict)
+            product_lines_abs[product_name] = product_paths
+            meta_line_dict['abs_rel'] = 'rel'
+            product_paths = dict({p: 0 for p in paths}, **meta_line_dict)
+            product_lines_rel[product_name] = product_paths
+
+        # assembly
+        for prod_mod in prod_mods:
+            product_name, module_name = prod_mod
+
+            output = [o for o in self.get_modular_system.get_module(module_name).outputs if o[1] == product_name][0]
+            activity = bw.get_activity(output[0])
+            meta_line_dict = {'method': ', '.join(method),
+                              'abs_rel': 'abs',
+                              'prod_mod': 'name',
+                              'index': module_name,  # module name
+                              'reference product': output[1],  # module product
+                              'name': activity.get('name'),  # activity name
+                              'location': activity.get('location'),  # activity location
+                              'database': output[0][0],  # activity database
+                              }
+
+            for result in results:
+                path = result['path']
+                if module_name in path:
+                    abs_line_dict[path] = result['module contribution'][module_name]
+                    rel_line_dict[path] = result['relative module contribution'][module_name]
+                    if product_name in path:
+                        product_lines_abs[product_name][path] = result['module contribution'][module_name]
+                        product_lines_rel[product_name][path] = result['relative module contribution'][module_name]
+                else:
+                    abs_line_dict[path] = 0
+                    rel_line_dict[path] = 0
+
+            # create the absolute line
+            line_dict = dict(meta_line_dict, **abs_line_dict)
+            data.append(line_dict)
+            # create the relative line
+            meta_line_dict['abs_rel'] = 'rel'
+            line_dict = dict(meta_line_dict, **rel_line_dict)
+            data.append(line_dict)
+
+        # add the product lines
+        for product_name in products:
+            data.append(product_lines_abs[product_name])
+            data.append(product_lines_rel[product_name])
+
+        return data, paths
 
 modular_system_controller = ModularSystemController()
