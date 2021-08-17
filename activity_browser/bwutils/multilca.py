@@ -755,6 +755,8 @@ class Contributions(object):
         """
         C = self.get_contributions(self.ACT, functional_unit, method)
 
+        if functional_unit and 'module' in aggregator:
+            aggregator = None
         x_fields = self._contribution_rows(self.ACT, aggregator)
         index, y_fields = self._contribution_index_cols(
             functional_unit=functional_unit, method=method

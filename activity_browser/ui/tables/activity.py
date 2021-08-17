@@ -16,7 +16,6 @@ from ...signals import signals
 from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
 from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
-
 class BaseExchangeTable(ABDataFrameView):
     MODEL = BaseExchangeModel
 
