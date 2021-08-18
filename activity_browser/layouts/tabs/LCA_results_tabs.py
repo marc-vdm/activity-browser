@@ -1253,6 +1253,9 @@ class ElementaryFlowContributionTab(ContributionTab):
             limit_type=self.cutoff_menu.limit_type, normalize=self.relative
         )
 
+    def get_context_menu_actions(self) -> []:
+        return None
+
 
 class BElementaryFlowContributionTab(BContributionTab):
     """Class for the Bokeh 'Elementary flow Contributions' sub-tab POC.
@@ -1338,11 +1341,10 @@ class ProcessContributionsTab(ContributionTab):
 
 
     def get_context_menu_actions(self) -> []:
-        if self.is_aggregated:
-            return None
-        return [("Open Activity", self.open_activity)]
+        if not self.is_aggregated:
+            return [("Open Activity", self.open_activity)]
 
-    def open_activity(self, bar_index: int, sub_bar_index: int):
+    def open_activity(self, sub_bar_index: int):
         if list(self.activity_key_label_map)[sub_bar_index] == "Rest":
             print("Cannot open Rest")
             return
