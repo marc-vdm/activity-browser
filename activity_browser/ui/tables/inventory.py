@@ -34,7 +34,7 @@ class DatabasesTable(ABDataFrameView):
             QtWidgets.QSizePolicy.Maximum
         ))
         self.relink_action = QtWidgets.QAction(
-            qicons.edit, "Re-link database", None
+            qicons.edit, "Relink the database", None
         )
         self.new_activity_action =QtWidgets.QAction(
             qicons.add, "Add new activity", None

@@ -28,12 +28,12 @@ from ...bwutils import (
 )
 from ...signals import signals
 from ...ui.figures import (
-    LCAResultsPlot, ContributionPlot, CorrelationPlot, LCAResultsBarChart, MonteCarloPlot
+    LCAResultsPlot, CorrelationPlot, LCAResultsBarChart, MonteCarloPlot, ContributionPlot
 )
 from ...ui.style import horizontal_line, vertical_line, header
 from ...ui.tables import ContributionTable, InventoryTable, LCAResultsTable
 from ...ui.widgets import CutoffMenu, SwitchComboBox
-from ...ui.web import SankeyNavigatorWidget
+from ...ui.web import SankeyNavigatorWidget, RestrictedWebViewWidget
 
 from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
 
@@ -69,7 +69,7 @@ Tabs = namedtuple(
 Relativity = namedtuple("relativity", ("relative", "absolute"))
 ExportTable = namedtuple("export_table", ("label", "copy", "csv", "excel"))
 ExportPlot = namedtuple("export_plot", ("label", "png", "svg"))
-PlotTableCheck = namedtuple("plot_table_space", ("plot", "table"))
+PlotTableVisibilityToggle = namedtuple("plot_table_space", ("plot", "table"))
 Combobox = namedtuple(
     "combobox_menu", (
         "func", "func_label", "method", "method_label",
@@ -257,7 +257,8 @@ class NewAnalysisTab(QWidget):
         # Important variables optionally used in subclasses
         self.table: Optional[QTableView] = None
         self.plot: Optional[QWidget] = None
-        self.plot_table: Optional[PlotTableCheck] = None
+        self.analysis_views: Optional[PlotTableVisibilityToggle] = None
+        self.is_plot_visible: Optional[bool] = None
         self.relativity: Optional[Relativity] = None
         self.relative: Optional[bool] = None
         self.export_plot: Optional[ExportPlot] = None
@@ -265,56 +266,72 @@ class NewAnalysisTab(QWidget):
 
         self.scenario_box = QComboBox()
         self.pt_layout = QVBoxLayout()
+        self.pt_layout.setContentsMargins(0, 0, 0, 0)
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-    def build_main_space(self) -> QScrollArea:
+    def build_main_space(self) -> QWidget:
         """Assemble main space where plots, tables and relevant options are shown."""
-        space = QScrollArea()
         widget = QWidget()
         self.pt_layout.setAlignment(QtCore.Qt.AlignTop)
         widget.setLayout(self.pt_layout)
-        space.setWidget(widget)
-        space.setWidgetResizable(True)
 
         # Option switches
-        self.plot_table = PlotTableCheck(
-            QCheckBox("Plot"), QCheckBox("Table")
+        self.analysis_views = PlotTableVisibilityToggle(
+            QRadioButton("Plot"),
+            QRadioButton("Table")
         )
-        self.plot_table.plot.setChecked(True)
-        self.plot_table.table.setChecked(True)
-        self.plot_table.table.stateChanged.connect(self.space_check)
-        self.plot_table.plot.stateChanged.connect(self.space_check)
+        self.analysis_views.plot.setChecked(True)
+        self.is_plot_visible = True
 
         # Assemble option row
         row = QHBoxLayout()
-        row.addWidget(self.plot_table.plot)
-        row.addWidget(self.plot_table.table)
-        row.addWidget(vertical_line())
+        analysis_views_radio_layout = QHBoxLayout()
+        analysis_views_group_box = QGroupBox()
+        analysis_views_radio_layout.addWidget(self.analysis_views.plot)
+        analysis_views_radio_layout.addWidget(self.analysis_views.table)
+        analysis_views_radio_layout.setMargin(5)
+        analysis_views_group_box.setLayout(analysis_views_radio_layout)
+        analysis_views_group_box.setStyleSheet("border:none")
+        analysis_views_group_box.setMaximumHeight(self.analysis_views.table.sizeHint().height() + 15)
+        row.addWidget(analysis_views_group_box)
+        self.analysis_views.plot.toggled.connect(self.analysis_view_toggled)
         if self.relativity:
-            row.addWidget(self.relativity.relative)
-            row.addWidget(self.relativity.absolute)
+            vline = vertical_line()
+            # vline.setMaximumHeight(self.analysis_views.table.sizeHint().height() + 15)
+            row.addWidget(vline)
+            relativity_group_box = QGroupBox()
+            relativity_radio_layout = QHBoxLayout()
+            relativity_radio_layout.addWidget(self.relativity.relative)
+            relativity_radio_layout.addWidget(self.relativity.absolute)
+            relativity_radio_layout.setMargin(5)
+            relativity_group_box.setLayout(relativity_radio_layout)
+            relativity_group_box.setStyleSheet("border:none")
+            relativity_group_box.setMaximumHeight(self.relativity.relative.sizeHint().height() + 15)
             self.relativity.relative.toggled.connect(self.relativity_check)
+            row.addWidget(relativity_group_box)
+
         row.addStretch()
 
         # Assemble Table and Plot area
         if self.table and self.plot:
             self.pt_layout.addLayout(row)
         if self.plot:
-            self.pt_layout.addWidget(self.plot, 1)
+            self.pt_layout.addWidget(self.plot)
         if self.table:
             self.pt_layout.addWidget(self.table)
-        self.pt_layout.addStretch()
-        return space
+        self.analysis_view_toggled(self.is_plot_visible)
+        return widget
 
-    @QtCore.Slot(name="checkboxChanges")
-    def space_check(self):
+    @QtCore.Slot(name="isAnalysisViewTypeToggled")
+    def analysis_view_toggled(self, checked: bool):
         """Show graph and/or table, whichever is selected.
 
         Can also hide both, if you want to do that.
         """
-        self.table.setVisible(self.plot_table.table.isChecked())
-        self.plot.setVisible(self.plot_table.plot.isChecked())
+        self.is_plot_visible = checked
+        self.table.setVisible(not checked)
+        self.plot.setVisible(checked)
 
     @QtCore.Slot(bool, name="isRelativeToggled")
     def relativity_check(self, checked: bool):
@@ -362,7 +379,7 @@ class NewAnalysisTab(QWidget):
         if self.table:
             self.update_table()
         if self.plot and self.table:
-            self.space_check()
+            self.analysis_view_toggled(self.is_plot_visible)
 
     def update_table(self, *args, **kwargs):
         """Update the table."""
@@ -672,7 +689,6 @@ class LCAScoresTab(NewAnalysisTab):
             for fu in self.parent.mlca.func_units
         ]
         idx = self.layout.indexOf(self.plot)
-        self.plot.figure.clf()
         self.plot.deleteLater()
         self.plot = LCAResultsBarChart(self.parent)
         self.layout.insertWidget(idx, self.plot)
@@ -696,7 +712,11 @@ class LCIAResultsTab(NewAnalysisTab):
         self.table.table_name = self.parent.cs_name + '_LCIA results'
         self.relative = False
 
-        self.layout.addWidget(self.build_main_space())
+        space = QScrollArea()
+        space.setWidget(self.build_main_space())
+        space.setWidgetResizable(True)
+
+        self.layout.addWidget(space)
         self.layout.addLayout(self.build_export(True, True))
 
     def build_export(self, has_table: bool = True, has_plot: bool = True) -> QHBoxLayout:
@@ -774,6 +794,8 @@ class ContributionTab(NewAnalysisTab):
         self.has_method, self.has_func = False, False
         self.unit = None
 
+        self.is_aggregated = False
+
     def set_filename(self, optional_fields: dict = None):
         """Given a dictionary of fields, put together a usable filename for the plot and table."""
         optional = optional_fields or {}
@@ -849,8 +871,10 @@ class ContributionTab(NewAnalysisTab):
         etc.) and fed into update calls.
         """
         if self.combobox_menu.agg.currentText() != 'none':
+            self.is_aggregated = True
             compare_fields = {"aggregator": self.combobox_menu.agg.currentText()}
         else:
+            self.is_aggregated = False
             compare_fields = {"aggregator": None}
 
         # Determine which comparison is active and update the comparison.
@@ -906,16 +930,22 @@ class ContributionTab(NewAnalysisTab):
     def update_plot(self):
         """Update the plot."""
         idx = self.pt_layout.indexOf(self.plot)
-        self.plot.figure.clf()
         # name is already altered by set_filename before update_plot occurs.
         name = self.plot.plot_name
         self.plot.deleteLater()
         self.plot = ContributionPlot()
         self.pt_layout.insertWidget(idx, self.plot)
-        super().update_plot(self.df, unit=self.unit)
+        super().update_plot(self.df, unit=self.unit, context_menu_actions=self.get_context_menu_actions(),
+                            is_relative=self.relative)
         self.plot.plot_name = name
         if self.pt_layout.parentWidget():
             self.pt_layout.parentWidget().updateGeometry()
+
+    def get_context_menu_actions(self) -> []:
+        """Gets the context menu options, if any, else the context menu will be disabled.
+
+        Implement in subclass."""
+        raise NotImplementedError
 
 
 class ElementaryFlowContributionTab(ContributionTab):
@@ -936,6 +966,9 @@ class ElementaryFlowContributionTab(ContributionTab):
         Plot/Table
         Export options
     """
+
+    def get_context_menu_actions(self) -> []:
+        return None
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1003,6 +1036,9 @@ class ProcessContributionsTab(ContributionTab):
         self.connect_signals()
         self.toggle_comparisons(self.switches.indexes.func)
 
+        # Used as a source of activity key, used to open activity from context menu of chart
+        self.activity_key_label_map = None
+
     def build_combobox(self, has_method: bool = True,
                        has_func: bool = False) -> QHBoxLayout:
         self.combobox_menu.agg.addItems(self.parent.contributions.DEFAULT_ACT_AGGREGATES)
@@ -1025,10 +1061,13 @@ class ProcessContributionsTab(ContributionTab):
         if self.parent.modular_lca and 'module' in self.combobox_menu.agg.currentText():
             df = self.get_modular_df(*args, **kwargs)
         else:
-            df = self.parent.contributions.top_process_contributions(
+            df, activity_key_label_map = self.parent.contributions.top_process_contributions(
                 **kwargs, limit=self.cutoff_menu.cutoff_value,
                 limit_type=self.cutoff_menu.limit_type, normalize=self.relative
             )
+            if activity_key_label_map is not None and 'Total' in activity_key_label_map.keys():
+                activity_key_label_map.pop("Total")
+            self.activity_key_label_map = activity_key_label_map
         return df
 
     def get_modular_df(self, *args, **kwargs) -> pd.DataFrame:
@@ -1126,7 +1165,11 @@ class CorrelationsTab(NewAnalysisTab):
         if not self.parent.single_func_unit:
             self.plot = CorrelationPlot(self.parent)
 
-        self.layout.addWidget(self.build_main_space())
+        space = QScrollArea()
+        space.setWidget(self.build_main_space())
+        space.setWidgetResizable(True)
+
+        self.layout.addWidget(space)
         self.layout.addLayout(self.build_export(
             has_table=False, has_plot=not self.parent.single_func_unit
         ))
@@ -1403,7 +1446,6 @@ class MonteCarloTab(NewAnalysisTab):
 
     def update_plot(self, method):
         idx = self.layout.indexOf(self.plot)
-        self.plot.figure.clf()
         self.plot.deleteLater()
         # name is already altered by update_mc before update_plot
         name = self.plot.plot_name
