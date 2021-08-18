@@ -1154,6 +1154,18 @@ class ProcessContributionsTab(ContributionTab):
         df.drop(['method', 'abs_rel', 'prod_mod'], axis=1, inplace=True)
         return df
 
+    def get_context_menu_actions(self) -> []:
+        if self.is_aggregated:
+            return None
+        return [("Open Activity", self.open_activity)]
+
+    def open_activity(self, bar_index: int, sub_bar_index: int):
+        if list(self.activity_key_label_map)[sub_bar_index] == "Rest":
+            print("Cannot open Rest")
+            return
+        signals.open_activity_tab.emit(
+            self.activity_key_label_map[list(self.activity_key_label_map)[sub_bar_index]])
+
 class CorrelationsTab(NewAnalysisTab):
     def __init__(self, parent):
         super().__init__(parent)
