@@ -1,5 +1,6 @@
 from activity_browser.ui.tables.views import ABDataFrameView, ABDictTreeView
 from activity_browser.ui.icons import qicons
+from .mlca_icons import mlca_qicons
 
 from .mLCA_table_models import (
     ModuleDatabaseModel,
@@ -205,7 +206,7 @@ class ModuleChainTable(GenericModuleTable):
         self.add_output_action.triggered.connect(self.add_output)
 
         self.add_cut_action = QtWidgets.QAction(
-            qicons.add, "Add activity as cut", None
+            mlca_qicons.cut, "Add activity as cut", None
         )
         self.add_cut_action.triggered.connect(self.add_cut)
 
@@ -216,7 +217,14 @@ class ModuleChainTable(GenericModuleTable):
         menu.addAction(self.open_activity_action)
         menu.addAction(self.open_graph_action)
         menu.addAction(self.add_output_action)
-        menu.addAction(self.add_cut_action)
+
+        # check if 'add to cut' should be enabled
+        module = self.model.module
+        key = self.get_selected_key
+        if module.internal_edges_with_cuts:
+            parents, children, value = zip(*module.internal_edges_with_cuts)
+            if key not in children:
+                menu.addAction(self.add_cut_action)
         menu.addAction(self.remove_activity_action)
         menu.exec_(event.globalPos())
 

@@ -7,6 +7,7 @@ from PySide2.QtCore import Slot
 from ...settings import project_settings
 from ...signals import signals
 from ..icons import qicons
+from activity_browser.extensions.mlca.mlca_icons import mlca_qicons
 from .delegates import CheckboxDelegate
 from .models import DatabasesModel, ActivitiesBiosphereModel
 from .views import ABDataFrameView
@@ -151,19 +152,21 @@ class ActivitiesBiosphereTable(ABDataFrameView):
             self.duplicate_activities_to_db
         )
 
-        items = self.generate_module_items(self.model.get_key(self.currentIndex()))
-        if len(items) > 0:
+        available_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(available_modules) > 0:
             menu.addSeparator()
-            sub_menu = menu.addMenu(qicons.add, "Add activity to module")
+            sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
             sub_menu.addAction(self.add_to_module_action)
             module_actions = []
-            for item in items:
-                module_actions.append(QtWidgets.QAction(
-                    qicons.add, "Add activity to '{}'".format(item), None
-                ))
-            for module_action in module_actions:
+            for module_name in available_modules:
+                module_actions.append((module_name,
+                                       QtWidgets.QAction(
+                                           qicons.add, "Add activity to '{}'".format(module_name), None
+                                       )))
+            for module_data in module_actions:
+                module_name, module_action = module_data
                 sub_menu.addAction(module_action)
-                module_action.triggered.connect(partial(self.module_context_handler, item))
+                module_action.triggered.connect(partial(self.module_context_handler, module_name))
         else:
             menu.addAction(self.add_to_module_action)
 
@@ -191,7 +194,7 @@ class ActivitiesBiosphereTable(ABDataFrameView):
                 # put in any module that this activity is not already part of
                 if key not in msc.affected_activities[module[0]] and module[0] not in items:
                     items.append(module[0])
-        return items
+        return msc.empty_modules + items
 
     def module_context_handler(self, item_name):
         """Decide what happens based on which context menu option was clicked"""
