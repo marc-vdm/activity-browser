@@ -268,7 +268,7 @@ class Module(object):
         if not self.scaling_activities:
             raise ValueError("No scaling activity")
         if hasattr(self, "calculated_lca"):
-            self.calculated_lca.method = method
+            self.calculated_lca.switch_method(method)
             self.calculated_lca.lcia()
         else:
             demand = self.get_background_lci_demand(amount)
