@@ -11,7 +11,8 @@ import pandas as pd
 from activity_browser.bwutils import AB_metadata
 
 from .mLCA_signals import mlca_signals
-from .modularsystem import modular_system_controller as msc
+from .modular_system_controller import modular_system_controller as msc
+
 
 class ModuleDatabaseModel(PandasModel):
     """Contain data for all modules in the modular system database."""
