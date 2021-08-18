@@ -27,6 +27,7 @@ from ...bwutils import (
     commontasks as bc
 )
 from ...signals import signals
+from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 from ...ui.figures import (
     LCAResultsPlot, CorrelationPlot, LCAResultsBarChart, MonteCarloPlot, ContributionPlot
 )
@@ -1058,7 +1059,8 @@ class ProcessContributionsTab(ContributionTab):
                     self.combobox_menu.agg.addItems(['module products'])
 
         if self.parent.modular_lca and 'module' in self.combobox_menu.agg.currentText():
-            df = self.get_modular_df(*args, **kwargs)
+            df, activity_key_label_map = self.get_modular_df(*args, **kwargs)
+            self.activity_key_label_map = activity_key_label_map
         else:
             df, activity_key_label_map = self.parent.contributions.top_process_contributions(
                 **kwargs, limit=self.cutoff_menu.cutoff_value,
@@ -1148,14 +1150,17 @@ class ProcessContributionsTab(ContributionTab):
                     break
         new_columns = meta_columns + new_cols
         df = df[new_columns]
+        used_modules = list(df['index'])[1:]
 
         # remove the method, abs_rel and prod_mod columns
         df.drop(['method', 'abs_rel', 'prod_mod'], axis=1, inplace=True)
-        return df
+        return df, used_modules
 
     def get_context_menu_actions(self) -> []:
         if not self.is_aggregated:
             return [("Open Activity", self.open_activity)]
+        if self.combobox_menu.agg.currentText() == 'module names':
+            return [("Open Module", self.open_module)]
 
     def open_activity(self, bar_index: int, sub_bar_index: int):
         if list(self.activity_key_label_map)[sub_bar_index] == "Rest":
@@ -1163,6 +1168,14 @@ class ProcessContributionsTab(ContributionTab):
             return
         signals.open_activity_tab.emit(
             self.activity_key_label_map[list(self.activity_key_label_map)[sub_bar_index]])
+
+    def open_module(self, bar_index: int, sub_bar_index: int):
+        if self.activity_key_label_map[sub_bar_index] == "Rest":
+            print("Cannot open Rest")
+            return
+        module_name = self.activity_key_label_map[sub_bar_index]
+        mlca_signals.module_selected.emit(module_name)
+        signals.show_tab.emit('Modular System')
 
 class CorrelationsTab(NewAnalysisTab):
     def __init__(self, parent):
