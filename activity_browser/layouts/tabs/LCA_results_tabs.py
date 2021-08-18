@@ -967,9 +967,6 @@ class ElementaryFlowContributionTab(ContributionTab):
         Export options
     """
 
-    def get_context_menu_actions(self) -> []:
-        return None
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -999,6 +996,8 @@ class ElementaryFlowContributionTab(ContributionTab):
             limit_type=self.cutoff_menu.limit_type, normalize=self.relative
         )
 
+    def get_context_menu_actions(self) -> []:
+        return None
 
 class ProcessContributionsTab(ContributionTab):
     """Class for the 'Process Contributions' sub-tab.
@@ -1155,9 +1154,8 @@ class ProcessContributionsTab(ContributionTab):
         return df
 
     def get_context_menu_actions(self) -> []:
-        if self.is_aggregated:
-            return None
-        return [("Open Activity", self.open_activity)]
+        if not self.is_aggregated:
+            return [("Open Activity", self.open_activity)]
 
     def open_activity(self, bar_index: int, sub_bar_index: int):
         if list(self.activity_key_label_map)[sub_bar_index] == "Rest":
