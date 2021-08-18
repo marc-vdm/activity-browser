@@ -433,13 +433,12 @@ class ModularSystem(object):
             print('\nCannot calculate LCAs for alternatives as system contains ' \
                   'loops (', self.has_loops, ') / multi-output modules (', self.has_multi_output_processes, ').')
         else:
-            #TODO fix:
-            # assume that only one product is demanded for now (functional unit)
             path_lca_data = []
-            for path in self.all_pathways(list(demand.keys())[0]):
-                path_lca_data.append(self.lca_linked_modules(method, path, demand))
+            for _demand in demand.items():
+                _demand, amount = _demand
+                for path in self.all_pathways(_demand):
+                    path_lca_data.append(self.lca_linked_modules(method, path, {_demand: amount}))
             return path_lca_data
-
 
 class ModularSystemController(object):
     """Manages the data of the modular system.
@@ -453,7 +452,7 @@ class ModularSystemController(object):
         self.outputs = None
         self.affected_activities = None
         self.related_activities = None
-        self.lca_result_by_module = None
+        self.lca_result = None
 
         self.modular_system_path
         self.module_names
@@ -851,10 +850,8 @@ class ModularSystemController(object):
         for module, amount in product_amount:
             demand[module] = amount
 
-        lca_result = {}
         data = []
         for method in methods:
-            method_result = {}
 
             results = self.get_modular_system.lca_alternatives(method, demand)
             _data, paths = self.format_results(results)
@@ -871,9 +868,9 @@ class ModularSystemController(object):
         headers = meta_headers + paths
         df = pd.DataFrame(data, columns=headers).sort_values(['index', 'reference product'])
 
-        self.lca_result_by_module = df
+        self.lca_result = df
 
-    def format_results(self, results, by='module name'):
+    def format_results(self, results):
         data = []
         prod_mods = []
 
