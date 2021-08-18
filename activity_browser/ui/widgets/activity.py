@@ -4,7 +4,7 @@ from functools import partial
 from PySide2 import QtCore, QtWidgets
 from PySide2.QtWidgets import QMessageBox
 
-from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
+from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
 from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
 from .line_edit import SignalledLineEdit, SignalledComboEdit

@@ -14,7 +14,7 @@ from .mLCA_tables import (
     ModuleChainTable,
     ModuleCutsTree
 )
-from .modularsystem import modular_system_controller as msc
+from .modular_system_controller import modular_system_controller as msc
 
 from .mlca_icons import mlca_qicons
 

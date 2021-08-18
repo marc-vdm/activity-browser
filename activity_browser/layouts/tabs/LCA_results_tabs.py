@@ -35,7 +35,7 @@ from ...ui.tables import ContributionTable, InventoryTable, LCAResultsTable
 from ...ui.widgets import CutoffMenu, SwitchComboBox
 from ...ui.web import SankeyNavigatorWidget
 
-from activity_browser.extensions.mlca.modularsystem import modular_system_controller as msc
+from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
 
 
 def get_header_layout(header_text: str) -> QVBoxLayout:
