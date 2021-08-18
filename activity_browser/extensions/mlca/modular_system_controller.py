@@ -6,14 +6,12 @@ import pandas as pd
 from .module import Module
 from .modularsystem import ModularSystem
 from .mLCA_signals import mlca_signals
-#from activity_browser.extensions.mlca import ModularSystem, Module
-#from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 from activity_browser.signals import signals
 
 
 class ModularSystemController(object):
     """Manages the data of the modular system.
-    Data manager takes care of saving data to the right place and opening the right modular systems"""
+    Controller takes care of saving data to the right place, opening the right modular systems and editing any data."""
     def __init__(self):
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
@@ -237,6 +235,10 @@ class ModularSystemController(object):
                             for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]
                 for new_cut in new_cuts:
                     self.get_modular_system.get_module(module_name).cuts.append(new_cut)
+                    chain = self.get_modular_system.get_module(module_name).chain
+                # remove the cut from the chain
+                self.get_modular_system.get_module(module_name).remove_cuts_from_chain(chain, new_cuts)
+
                 self.update_modular_system()
                 mlca_signals.module_db_changed.emit()
                 mlca_signals.module_changed.emit(module_name)
@@ -529,6 +531,5 @@ class ModularSystemController(object):
             data.append(product_lines_rel[product_name])
 
         return data, paths
-
 
 modular_system_controller = ModularSystemController()
