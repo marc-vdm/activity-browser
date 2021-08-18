@@ -9,6 +9,7 @@ import traceback
 from typing import List, Optional, Union
 
 import pandas as pd
+import numpy as np
 from bw2calc.errors import BW2CalcError
 import brightway2 as bw
 from PySide2.QtWidgets import (
@@ -1031,7 +1032,7 @@ class ProcessContributionsTab(ContributionTab):
         return df
 
     def get_modular_df(self, *args, **kwargs) -> pd.DataFrame:
-
+        """Provide the dataframe to display in table and figure, properly formatted for cutoff etc."""
         method = self.combobox_menu.method.currentText()
         if self.relative:
             abs_rel = 'rel'
@@ -1040,47 +1041,79 @@ class ProcessContributionsTab(ContributionTab):
         limit = self.cutoff_menu.cutoff_value
         limit_type = self.cutoff_menu.limit_type
 
-        df = msc.lca_result_by_module
+        df = msc.lca_result
+
         # filter on names or products
         if self.combobox_menu.agg.currentText() == 'module names':
             df = df[df['prod_mod'] == 'name']
         elif self.combobox_menu.agg.currentText() == 'module products':
             df = df[df['prod_mod'] == 'product']
+
         # filter on method
         df = df[df['method'] == method]
+
         # get totals
-        sum_columns = list(df.columns)[7:]
-        meta_columns = list(df.columns)[:7]
         columns = list(df.columns)
-        totals = list(df[df['abs_rel'] == abs_rel][sum_columns].sum(axis=0))
-        totals = {k: v for k, v in zip(sum_columns, totals)}
-        totals_row = {meta_columns: '' for meta_columns in meta_columns}
-        totals_row['index'] = 'Total'
-        totals_row = dict(totals_row, **totals)
-        # filter out items that do not pass the limit
-        if limit_type == 'percent':
-            pass #TODO
-        elif limit_type == 'number':
-            if df.shape[0] > limit:
-                pass #TODO
+        meta_n = 8
+        meta_columns = list(df.columns)[:meta_n]
+        meta_row = {meta_columns: '' for meta_columns in meta_columns}
+        meta_row['index'] = 'Total'
+        meta_row['abs_rel'] = abs_rel
+        sum_columns = list(df.columns)[meta_n:]
+        totals = list(df[df['abs_rel'] == abs_rel][sum_columns].sum(axis=0))  # calculate totals
+        totals_dict = {k: v for k, v in zip(sum_columns, totals)}
+        totals_row = dict(meta_row, **totals_dict)  # make dict to make totals df
+        totals_row = pd.DataFrame([totals_row], columns=columns)  # make totals row a df
+        # store absolute totals for sorting
+        if self.relative:
+            abs_totals = list(df[df['abs_rel'] == 'abs'][sum_columns].sum(axis=0))
+            abs_totals = {k: v for k, v in zip(sum_columns, abs_totals)}
+        else:
+            abs_totals = totals_dict
+
         # filter on absolute/relative
         df = df[df['abs_rel'] == abs_rel]
-        # add the totals and rest columns
-        totals_row = pd.DataFrame([totals_row], columns=columns)
-        df = pd.concat([totals_row, df])
-        #TODO add rest
+        # filter out items that do not pass the limit
+        if limit_type == 'percent':
+            for column_name in sum_columns:
+                if self.relative:
+                    min_val = limit*totals_dict[column_name]
+                else:
+                    min_val = limit
+                column = df[column_name].sort_values(ascending=False)
+                df[column_name] = column[column >= min_val]
+        elif limit_type == 'number':
+            for column_name in sum_columns:
+                column = df[column_name].sort_values(ascending=False)
+                df[column_name] = column.head(limit)
+        df['temp'] = df[sum_columns].sum(axis=1)
+        df['temp'].replace(0, np.nan, inplace=True)
+        df.dropna(subset=['temp'], inplace=True)
+        df.drop(['temp'], axis=1, inplace=True)
 
-        # sort data large > small
-        #TODO
+        # create the rest column
+        rest = [x1 - x2 for x1, x2 in zip(totals, list(df[sum_columns].sum(axis=0)))]  # calculate rest from totals
+        meta_row['index'] = 'Rest'
+        rest_row = dict(meta_row, **{k: v for k, v in zip(sum_columns, rest)})
+        rest_row = pd.DataFrame([rest_row], columns=columns)
+        # add the totals and column
+        df = pd.concat([totals_row, rest_row, df])
 
-
-
-
+        # sort data small > large
+        vals = list(abs_totals.values())
+        vals.sort()
+        new_cols = []
+        for val in vals:
+            for col, v in abs_totals.items():
+                if v == val and col not in new_cols:
+                    new_cols.append(col)
+                    break
+        new_columns = meta_columns + new_cols
+        df = df[new_columns]
 
         # remove the method, abs_rel and prod_mod columns
         df.drop(['method', 'abs_rel', 'prod_mod'], axis=1, inplace=True)
         return df
-
 
 class CorrelationsTab(NewAnalysisTab):
     def __init__(self, parent):
