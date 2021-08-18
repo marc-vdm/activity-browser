@@ -433,4 +433,3 @@ class ModularSystem(object):
                 for path in self.all_pathways(_demand):
                     path_lca_data.append(self.lca_linked_modules(method, path, {_demand: amount}))
             return path_lca_data
-
