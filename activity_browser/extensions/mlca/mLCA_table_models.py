@@ -55,6 +55,7 @@ class GenericModuleModel(PandasModel):
 
         self.key_col = 0
         self.module_name = None
+        self.module = None
 
     def connect_signals(self):
         mlca_signals.module_selected.connect(self.sync)
@@ -154,6 +155,7 @@ class ModuleChainModel(GenericModuleModel):
 
     def sync(self, module_name: str) -> None:
         self.module_name = module_name
+        self.module = msc.get_modular_system.get_module(module_name)
         for raw_module in msc.get_raw_data:
             if raw_module['name'] == module_name:
                 chain = raw_module['chain']

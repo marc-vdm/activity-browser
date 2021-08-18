@@ -217,7 +217,7 @@ class ModularSystemController(object):
         mlca_signals.module_changed.emit(module_name)
 
     def add_to_cut(self, module_key):
-        """Add activity to chain.
+        """Add activity to cut.
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
@@ -295,7 +295,11 @@ class ModularSystemController(object):
 
         module_out is a tuple with (module_name, output)"""
         module_name, _output = module_out
-        self.get_modular_system.get_module(module_name).outputs.remove(_output)
+        for output in self.get_modular_system.get_module(module_name).outputs:
+            if output == _output:
+                self.get_modular_system.get_module(module_name).outputs.remove(_output)
+            else:
+                return
 
         if update:
             self.update_modular_system()
@@ -400,6 +404,10 @@ class ModularSystemController(object):
             for raw_module in self.get_raw_data:
                 module_names.append(raw_module['name'])
             return module_names
+
+    @property
+    def empty_modules(self):
+        return [m['name'] for m in self.get_raw_data if len(m['chain']) == 0]
 
     @property
     def modular_system_path(self):

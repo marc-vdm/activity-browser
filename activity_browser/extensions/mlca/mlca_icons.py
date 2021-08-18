@@ -24,6 +24,7 @@ class Icons(object):
     graph_mp = create_path('metaprocess', 'graph_metaprocess.png')
     load_db = create_path('metaprocess', 'open_database.png')
     metaprocess = create_path('metaprocess', 'metaprocess.png')
+    modular_system = create_path('metaprocess', 'modular_system.png')
     new = create_path('metaprocess', 'new_metaprocess.png')
     save_db = create_path('metaprocess', 'save_database.png')
     save_mp = create_path('metaprocess', 'save_metaprocess.png')
