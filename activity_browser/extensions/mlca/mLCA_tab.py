@@ -48,6 +48,8 @@ class mLCATab(QtWidgets.QWidget):
         mlca_signals.module_db_changed.connect(self.update_widgets)
         mlca_signals.module_selected.connect(self.update_widgets)
 
+        mlca_signals.import_modular_system.connect(self.import_modules)
+        mlca_signals.export_modules.connect(self.export_modules)
         mlca_signals.new_module.connect(self.new_module_dialog)
         mlca_signals.new_module_from_act.connect(self.new_module_dialog)
         mlca_signals.del_module.connect(self.del_module_dialog)
@@ -84,6 +86,27 @@ class mLCATab(QtWidgets.QWidget):
         sizes = [x.sizeHint().height() for x in widgets]
         self.splitter.setSizes(sizes)
 
+    def import_modules(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            caption='Select module data file',
+            filter='mLCA files (*.mlca)'
+        )
+        if path:
+            msc.import_modules(path)
+
+    def export_modules(self, export_names: list):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            caption='Export modules to file',
+            filter='mLCA files (*.mlca)'
+        )
+        if path:
+            if not path.endswith('.mlca'):
+                path += '.mlca'
+            #msc.save_modular_system(path=path)
+            msc.export_modules(export_names, path)
+
     def new_module_dialog(self, activity=None):
         """Dialog to add a new module to the modular system"""
         name, ok = QtWidgets.QInputDialog.getText(
@@ -109,7 +132,7 @@ class mLCATab(QtWidgets.QWidget):
         ok = QtWidgets.QMessageBox.question(
             self.window,
             "Delete module?",
-            ("Are you sure you want to delete module '{}'? This action cannot be undone").format(
+            ("Are you sure you want to delete module\n'{}'?\nThis action cannot be undone").format(
                 module_name)
         )
         if ok == QtWidgets.QMessageBox.Yes:
@@ -171,6 +194,12 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self.new_module_button = QtWidgets.QPushButton(qicons.add, "New")
         self.new_module_button.setToolTip('Add a new module')
 
+        self.import_button = QtWidgets.QPushButton(mlca_qicons.add_db, "Import")
+        self.import_button.setToolTip('Import modules to the modular system')
+
+        self.export_button = QtWidgets.QPushButton(mlca_qicons.save_db, "Export")
+        self.export_button.setToolTip('Export the modular system')
+
         self.graph_button = QtWidgets.QPushButton(qicons.graph_explorer, '')
         self.graph_button.setToolTip('Show the modular system in the graph view\n'
                                      "To see an individual module in the graph view, click the graph button in a Module overview below")
@@ -180,6 +209,8 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
     def _connect_signals(self):
         self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
+        self.import_button.clicked.connect(mlca_signals.import_modular_system.emit)
+        self.export_button.clicked.connect(self.exporter)
         self.graph_button.clicked.connect(self.show_modular_system_in_graph)
 
     def _construct_layout(self):
@@ -190,6 +221,8 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         header_layout.addWidget(self.new_module_button)
         header_layout.addWidget(self.label_no_modules)
         header_layout.addStretch()
+        header_layout.addWidget(self.import_button)
+        header_layout.addWidget(self.export_button)
         header_layout.addWidget(self.graph_button)
         header_widget.setLayout(header_layout)
 
@@ -202,6 +235,9 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
     def show_modular_system_in_graph(self):
         print('++ Graph view should be opened')
+
+    def exporter(self):
+        mlca_signals.export_modules.emit(msc.module_names)
 
     def update_widget(self):
         self.show()

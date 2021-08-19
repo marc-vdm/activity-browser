@@ -60,9 +60,37 @@ class ModularSystemController(object):
 
     # RETRIEVE OR SAVE DATA FROM/TO DISK
 
-    def save_modular_system(self) -> None:
+    def save_modular_system(self, modular_system=None, path=None) -> None:
         """Properly save modular system."""
-        self.modular_system.save_to_file(self.modular_system_path)
+        if not path:
+            path = self.modular_system_path
+        if not modular_system:
+            modular_system = self.modular_system
+
+        modular_system.save_to_file(path)
+
+    def import_modules(self, path: str) -> None:
+        """Import modules from path."""
+        print('++ import should happen from', path)
+
+        modular_system = self.get_modular_system
+        modular_system.load_from_file(filepath=path, append=True)
+        self.modular_system = modular_system
+        self.raw_data = self.modular_system.raw_data
+
+        self.save_modular_system()
+        mlca_signals.module_db_changed.emit()
+
+    def export_modules(self, export_names: list, path: str) -> None:
+        """Export list of modules to path."""
+        if export_names == self.module_names:
+            # export the entire modular system
+            self.save_modular_system(path=path)
+        else:
+            # get the modules to be exported and export them
+            export_modules = [module for module in self.raw_data if module['name'] in export_names]
+            export_system = self.get_modular_system_from_raw(export_modules)
+            self.save_modular_system(modular_system=export_system, path=path)
 
     @property
     def get_modular_system(self, path=None) -> ModularSystem:
@@ -74,7 +102,8 @@ class ModularSystemController(object):
         if self.modular_system:
             return self.modular_system
         elif self.raw_data:
-            return self.get_modular_system_from_raw
+            self.modular_system = self.get_modular_system_from_raw(self.raw_data)
+            return self.modular_system
         else:
             modular_system = ModularSystem()
             modular_system.load_from_file(filepath=path)
@@ -97,17 +126,13 @@ class ModularSystemController(object):
             self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
             return self.raw_data
 
-    @property
-    def get_modular_system_from_raw(self) -> ModularSystem:
+    def get_modular_system_from_raw(self, raw_data: list) -> ModularSystem:
         """Generate a modular system from raw data.
 
         Open raw and this function together do the same as the get_modular_system function."""
-        if self.raw_data:
-            module_list = [Module(**module) for module in self.raw_data]
-            self.modular_system = ModularSystem(module_list=module_list)
-            return self.modular_system
-        else:
-            return self.get_modular_system
+
+        module_list = [Module(**module) for module in raw_data]
+        return ModularSystem(module_list=module_list)
 
     def reset_modular_system(self, full_system=False) -> None:
         """Completely reset class data for the modular system."""
@@ -121,7 +146,7 @@ class ModularSystemController(object):
 
         self.get_raw_data
         if full_system:
-            self.get_modular_system_from_raw
+            self.modular_system = self.get_modular_system_from_raw(self.raw_data)
 
     # EDITING FULL MODULES
     # create/remove/copy entire modules
