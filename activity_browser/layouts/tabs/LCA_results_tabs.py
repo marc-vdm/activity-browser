@@ -171,7 +171,7 @@ class LCAResultsSubTab(QTabWidget):
         functional_units = [(list(fu.keys())[0], list(fu.values())[0]) for fu in functional_units]
         product_amount = set()
         for key, amount in functional_units:
-            if key in msc.outputs.keys():
+            if msc.outputs and key in msc.outputs.keys():
                 for _, output in msc.outputs[key]:
                     product_amount.add((output[1], amount))
         product_amount = list(product_amount)
