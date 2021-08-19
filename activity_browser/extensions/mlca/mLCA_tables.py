@@ -19,7 +19,6 @@ class ModuleDatabaseTable(ABDataFrameView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().setVisible(False)
-        #self.setSelectionMode(QtWidgets.QTableView.SingleSelection)
 
         self.setSizePolicy(QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred,
