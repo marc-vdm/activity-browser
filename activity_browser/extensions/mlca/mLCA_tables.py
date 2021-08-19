@@ -19,7 +19,7 @@ class ModuleDatabaseTable(ABDataFrameView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().setVisible(False)
-        self.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        #self.setSelectionMode(QtWidgets.QTableView.SingleSelection)
 
         self.setSizePolicy(QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred,
@@ -30,8 +30,14 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.delete_module_action = QtWidgets.QAction(
             qicons.delete, "Delete module", None
         )
+        self.delete_modules_action = QtWidgets.QAction(
+            qicons.delete, "Delete modules", None
+        )
         self.copy_module_action = QtWidgets.QAction(
             qicons.copy, "Copy module", None
+        )
+        self.copy_modules_action = QtWidgets.QAction(
+            qicons.copy, "Copy modules", None
         )
         self.rename_module_action = QtWidgets.QAction(
             qicons.edit, "Rename module", None
@@ -56,8 +62,14 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.delete_module_action.triggered.connect(
             lambda: mlca_signals.del_module.emit(self.selected_module_name)
         )
+        self.delete_modules_action.triggered.connect(
+            lambda: mlca_signals.del_modules.emit(self.selected_modules_names)
+        )
         self.copy_module_action.triggered.connect(
             lambda: mlca_signals.copy_module.emit(self.selected_module_name)
+        )
+        self.copy_modules_action.triggered.connect(
+            lambda: mlca_signals.copy_modules.emit(self.selected_modules_names)
         )
         self.rename_module_action.triggered.connect(
             lambda: mlca_signals.rename_module.emit(self.selected_module_name)
@@ -65,17 +77,27 @@ class ModuleDatabaseTable(ABDataFrameView):
 
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu(self)
-        menu.addAction(self.delete_module_action)
-        menu.addAction(self.copy_module_action)
-        menu.addAction(self.rename_module_action)
+        if len(self.selectedIndexes()) == 1:
+            menu.addAction(self.delete_module_action)
+            menu.addAction(self.copy_module_action)
+            menu.addAction(self.rename_module_action)
+        else:
+            menu.addAction(self.delete_modules_action)
+            menu.addAction(self.copy_modules_action)
 
         menu.exec_(event.globalPos())
 
     @property
     def selected_module_name(self) -> str:
-        """ Return the database name of the user-selected index.
+        """ Return the module name of the user-selected index.
         """
         return self.model.get_module_name(self.currentIndex())
+
+    @property
+    def selected_modules_names(self) -> list:
+        """ Return the module names of the user-selected indexes.
+        """
+        return [self.model.get_module_name(idx) for idx in self.selectedIndexes()]
 
     def get_products(self, proxy: QtCore.QModelIndex) -> tuple:
         return self.model.get_product_names(proxy)
