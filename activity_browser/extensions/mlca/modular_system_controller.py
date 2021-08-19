@@ -12,7 +12,7 @@ from activity_browser.signals import signals
 class ModularSystemController(object):
     """Manages the data of the modular system.
     Controller takes care of saving data to the right place, opening the right modular systems and editing any data."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
 
@@ -28,10 +28,9 @@ class ModularSystemController(object):
 
         self.connect_signals()
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
         signals.project_selected.connect(self.project_change)
         mlca_signals.copy_module.connect(self.copy_module)
-        mlca_signals.module_db_changed.connect(self.get_outputs)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
         mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_set_obs.connect(self.set_output_based_scaling)
@@ -48,59 +47,60 @@ class ModularSystemController(object):
         mlca_signals.replace_output.connect(self.replace_output)
         mlca_signals.alter_output.connect(self.alter_output)
 
-    def project_change(self):
-        """Get project's new modular system location"""
+    def project_change(self) -> None:
+        """Get projects new modular system location, resets class data."""
         # update the project/folder now that the old location is saved to
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
-        # reset the data
-        self.raw_data = None
-        self.modular_system = None
 
-    def save_modular_system(self):
-        """Properly save modular system"""
-        print('++ Save is _NOT IMPLEMENTED_ currently')
-        #self.modular_system.save_to_file(self.modular_system_path)
-        pass
+        # reset the class data
+        self.reset_modular_system(full_system=True)
+        mlca_signals.module_db_changed.emit()
+
+    # RETRIEVE OR SAVE DATA FROM/TO DISK
+
+    def save_modular_system(self) -> None:
+        """Properly save modular system."""
+        self.modular_system.save_to_file(self.modular_system_path)
 
     @property
-    def get_modular_system(self, path=None, force_open=False) -> ModularSystem:
+    def get_modular_system(self, path=None) -> ModularSystem:
         """Load modular system from file and return the modular system object."""
         if not path:
             path = self.modular_system_path
 
         # only load if not loaded already
-        if self.modular_system and not force_open:
+        if self.modular_system:
             return self.modular_system
+        elif self.raw_data:
+            return self.get_modular_system_from_raw
         else:
             modular_system = ModularSystem()
             modular_system.load_from_file(filepath=path)
             self.modular_system = modular_system
-            # load raw data too
+            # update raw data
             self.raw_data = self.modular_system.raw_data
-            # load metadata
-            self.get_outputs()
-            self.get_affected_activities()
-            self.get_related_activities()
+            # metadata is updated through signals in individual functions
             return self.modular_system
 
     @property
-    def get_raw_data(self, path=None, force_open=False):
+    def get_raw_data(self, path=None) -> list:
         """Load raw modular system data and return the raw data."""
         if not path:
             path = self.modular_system_path
 
         # only load if not loaded already
-        if self.raw_data and not force_open:
+        if self.raw_data:
             return self.raw_data
         else:
             self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
             return self.raw_data
 
     @property
-    def get_modular_system_from_raw(self):
+    def get_modular_system_from_raw(self) -> ModularSystem:
         """Generate a modular system from raw data.
-        open raw and this function together do the same as the get_modular_system function."""
+
+        Open raw and this function together do the same as the get_modular_system function."""
         if self.raw_data:
             module_list = [Module(**module) for module in self.raw_data]
             self.modular_system = ModularSystem(module_list=module_list)
@@ -108,13 +108,27 @@ class ModularSystemController(object):
         else:
             return self.get_modular_system
 
-    def add_module(self, module_name, outputs=[], chain=[], cuts=[], *args, **kwargs):
+    def reset_modular_system(self, full_system=False) -> None:
+        """Completely reset class data for the modular system."""
+        self.modular_system = None
+        self.raw_data = None
+
+        self.outputs = None
+        self.affected_activities = None
+        self.related_activities = None
+        self.lca_result = None
+
+        self.get_raw_data
+        if full_system:
+            self.get_modular_system_from_raw
+
+    # EDITING FULL MODULES
+    # create/remove/copy entire modules
+
+    def add_module(self, module_name: str, outputs=[], chain=[], cuts=[], *args, **kwargs) -> None:
         """Add module to modular system."""
-        # open the file
-        if self.raw_data:
-            modular_system = self.get_modular_system_from_raw
-        else:
-            modular_system = self.get_modular_system
+        # get modular system
+        modular_system = self.get_modular_system
 
         # add the new module
         modular_system.add_module(module_list=[{'name': module_name,
@@ -129,13 +143,10 @@ class ModularSystemController(object):
         self.save_modular_system()
         mlca_signals.module_db_changed.emit()
 
-    def del_module(self, module_name):
+    def del_module(self, module_name: str) -> None:
         """Delete module from modular system."""
-        # open the file
-        if self.raw_data:
-            modular_system = self.get_modular_system_from_raw
-        else:
-            modular_system = self.get_modular_system
+        # get modular system
+        modular_system = self.get_modular_system
 
         # delete the new module
         modular_system.remove_module([module_name])
@@ -146,7 +157,7 @@ class ModularSystemController(object):
         self.save_modular_system()
         mlca_signals.module_db_changed.emit()
 
-    def copy_module(self, module_name, copy_name=None):
+    def copy_module(self, module_name: str, copy_name=None) -> None:
         """Copy module in modular system, copy name is 'original_COPY'."""
         # get data to copy
         for raw_module in self.raw_data:
@@ -158,26 +169,35 @@ class ModularSystemController(object):
         else:
             module['module_name'] = copy_name
         self.add_module(**module)
+        mlca_signals.module_db_changed.emit()
 
-    def update_modular_system(self):
+    # EDITING DATA IN MODULES
+    # make changes to chain/outputs/cuts or other module data
+
+    def update_modular_system(self) -> None:
+        """Update the modular system after making changes to a module.
+
+        This function is called after changes are made to a module and the modular system needs to be updated."""
         self.modular_system.update(self.modular_system.get_modules())
         # update the raw data
         self.raw_data = self.modular_system.raw_data
         self.save_modular_system()
 
-    def rename_module(self, old_module_name, new_module_name):
+    def rename_module(self, old_module_name: str, new_module_name: str) -> None:
         """Rename module in modular system."""
         self.get_modular_system.get_module(old_module_name).name = new_module_name
+
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()
 
-    def set_module_color(self, module_name, color):
-        """Change color of module in modular system."""
+    def set_module_color(self, module_name: str, color: str) -> None:
+        """Set color of module in modular system."""
         self.get_modular_system.get_module(module_name).color = color
+
         self.update_modular_system()
         mlca_signals.module_color_set.emit(module_name)
 
-    def set_output_based_scaling(self, module_state):
+    def set_output_based_scaling(self, module_state: tuple) -> None:
         """Set the 'output based scaling' to the desired state.
 
         module_state is a tuple with (module_name and the desired state)"""
@@ -187,18 +207,19 @@ class ModularSystemController(object):
         self.update_modular_system()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_chain(self, module_key, update=True):
+    def add_to_chain(self, module_key: tuple, update=True) -> None:
         """Add activity to chain.
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         self.get_modular_system.get_module(module_name).chain.add(key)
+
         if update:
             self.update_modular_system()
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_chain(self, module_key):
+    def remove_from_chain(self, module_key: tuple) -> None:
         """Remove activity from chain.
 
         module_key is a tuple with (module_name, activity key)"""
@@ -212,11 +233,12 @@ class ModularSystemController(object):
             if chn == key:
                 self.get_modular_system.get_module(module_name).chain.remove(chn)
                 break
+
         self.update_modular_system()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_cut(self, module_key):
+    def add_to_cut(self, module_key: tuple) -> None:
         """Add activity to cut.
 
         module_key is a tuple with (module_name, activity key)"""
@@ -243,10 +265,10 @@ class ModularSystemController(object):
                 mlca_signals.module_db_changed.emit()
                 mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_cut(self, module_key_src, update=True):
+    def remove_from_cut(self, module_key_src: tuple, update=True) -> None:
         """Remove activity from output.
-        Adds the 'cut' activity to the chain if the key is not being removed from the chain.
 
+        Adds the 'cut' activity to the chain if the key is not being removed from the chain.
         module_key_src is a tuple with (module_name, activity key OR cut, source info)"""
         module_name, key_or_cut, src_info = module_key_src
         for cut in self.get_modular_system.get_module(module_name).cuts:
@@ -263,10 +285,10 @@ class ModularSystemController(object):
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
-    def alter_cut(self, module_cut_new):
+    def alter_cut(self, module_cut_new: tuple) -> None:
         """Alter cut product in cuts.
-        Alters the cut product of a cut based on incoming data
 
+        Alters the cut product of a cut based on incoming data
         module_cut_new is a tuple with (module_name, cut, new name)"""
         module_name, old_cut, new_name = module_cut_new
 
@@ -279,18 +301,20 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_output(self, module_key):
+    def add_to_output(self, module_key: tuple) -> None:
         """Add activity to output.
 
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         ref_prod = bw.get_activity(key)["reference product"]
         self.get_modular_system.get_module(module_name).outputs.append((key, ref_prod, 1.0))
+
         self.update_modular_system()
+        self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_output(self, module_out, update=True):
+    def remove_from_output(self, module_out: tuple, update=True) -> None:
         """Remove activity from output.
 
         module_out is a tuple with (module_name, output)"""
@@ -303,13 +327,14 @@ class ModularSystemController(object):
 
         if update:
             self.update_modular_system()
+            self.get_outputs()
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
-    def replace_output(self, module_key):
+    def replace_output(self, module_key: tuple) -> None:
         """Replace output activity in outputs.
-        Removes the output and replaces with an activity 'downstream' from the output
 
+        Removes the output and replaces with an activity 'downstream' from the output
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         self.get_modular_system.get_module(module_name).chain.add(key)
@@ -321,13 +346,14 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
 
         self.update_modular_system()
+        self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def alter_output(self, module_old_new):
+    def alter_output(self, module_old_new: tuple) -> None:
         """Alter output activity in outputs.
-        Alters the output of an activity based on incoming data
 
+        Alters the output (name or amount) of an activity based on incoming data
         module_old_new is a tuple with (module_name, old output, new output)
         output consists of: (key, custom_name, amount)"""
         module_name, old_output, new_output = module_old_new
@@ -337,10 +363,14 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).outputs[i] = new_output
 
         self.update_modular_system()
+        self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def get_outputs(self):
+    # RETRIEVING DATA
+    # retrieve data about the modular system
+
+    def get_outputs(self) -> None:
         """Dict of all output activities in modular system, by key."""
         outputs = {}
         for module in self.get_raw_data:
@@ -353,7 +383,7 @@ class ModularSystemController(object):
                     outputs[key] = [(module['name'], output)]
         self.outputs = outputs
 
-    def get_affected_activities(self):
+    def get_affected_activities(self) -> dict:
         """Dict of all activities in module, by module."""
         aa = {}
         for module in self.get_raw_data:
@@ -362,7 +392,7 @@ class ModularSystemController(object):
         self.affected_activities = aa
         return aa
 
-    def get_related_activities(self):
+    def get_related_activities(self) -> dict:
         """Dict of all activities in and 'next to' module, by activity.
 
         Each activity that is an input to a part of the module or downstream from an output is in this dict."""
@@ -396,7 +426,8 @@ class ModularSystemController(object):
         return keys
 
     @property
-    def module_names(self):
+    def module_names(self) -> list:
+        """Return all module names of modules in the modular system."""
         if self.modular_system:
             return self.modular_system.modules
         else:
@@ -406,12 +437,13 @@ class ModularSystemController(object):
             return module_names
 
     @property
-    def empty_modules(self):
+    def empty_modules(self) -> list:
+        """Return all module names of modules with empty chain."""
         return [m['name'] for m in self.get_raw_data if len(m['chain']) == 0]
 
     @property
-    def modular_system_path(self):
-        """Return the modular system file, generate one if it does not exist yet"""
+    def modular_system_path(self) -> str:
+        """Return the modular system file, generate one if it does not exist yet."""
         # ms = modular system
         ms_dir = os.path.join(self.project_folder, 'modular_system')
         ms_file = os.path.join(ms_dir, 'modular_system.mlca')
@@ -425,8 +457,29 @@ class ModularSystemController(object):
             ModularSystem().save_to_file(filepath=ms_file)
         return ms_file
 
-    def modular_LCA(self, methods, product_amount):
-        """Get modular LCA results for all relevant pathways"""
+    # LCA
+    # calculate LCA results for a modular system
+
+    def modular_LCA(self, methods: list, product_amount: list) -> pd.DataFrame:
+        """Get modular LCA results for all relevant pathways.
+
+        LCA is done on a list of methods, and PRODUCTS.
+        This means all possible paths are calculated for a given product, not a module
+
+        Dataframe consists of metadata columns and then one column for each entry in results (path)
+        metadata columns are:
+            method = the method used: str
+            abs_rel = absolute or relative result: str (abs, rel)
+            prod_mod = product or module indication: str (product, name)
+            index = module or product name, depends on prod_mod: str
+            reference product = str
+            name = str
+            location = str
+            database = str
+        Final four metadata columns are empty if product, filled for activity if module
+        Each row is an entry result, with the method, abs_rel, prod_mod and index as identifiers.
+        Each actual data column (path) contains the LCA score value for that module/product in the given path (column)
+        """
         demand = {}
         for module, amount in product_amount:
             demand[module] = amount
@@ -451,7 +504,12 @@ class ModularSystemController(object):
 
         self.lca_result = df
 
-    def format_results(self, results):
+    def format_results(self, results: list) -> tuple:
+        """Prepare formatting of results to be put in a Pandas dataframe.
+
+        >> The data is only a list, ready to be put in a dataframe, not a dataframe <<
+        See def modular_lca above for dataframe formatting.
+        """
         data = []
         prod_mods = []
 
@@ -482,14 +540,14 @@ class ModularSystemController(object):
         product_lines_abs = {}
         product_lines_rel = {}
         for product_name in list(products):
-            meta_line_dict = {'method': ', '.join(method),
-                              'abs_rel': 'abs',
-                              'prod_mod': 'product',
+            meta_line_dict = {'method': ', '.join(method),  # method
+                              'abs_rel': 'abs',  # absolute or relative result
+                              'prod_mod': 'product',  # 'product' indicates this is a module_product row
                               'index': product_name,  # product name
-                              'reference product': '',  # module product
-                              'name': '',  # activity name
-                              'location': '',  # activity location
-                              'database': '',  # activity database
+                              'reference product': '',  # empty for product
+                              'name': '',  # empty for product
+                              'location': '',  # empty for product
+                              'database': '',  # empty for product
                               }
             product_paths = dict({p: 0 for p in paths}, **meta_line_dict)
             product_lines_abs[product_name] = product_paths
@@ -503,9 +561,9 @@ class ModularSystemController(object):
 
             output = [o for o in self.get_modular_system.get_module(module_name).outputs if o[1] == product_name][0]
             activity = bw.get_activity(output[0])
-            meta_line_dict = {'method': ', '.join(method),
-                              'abs_rel': 'abs',
-                              'prod_mod': 'name',
+            meta_line_dict = {'method': ', '.join(method),  # method
+                              'abs_rel': 'abs',  # absolute or relative result
+                              'prod_mod': 'name',  # 'name' indicates this is a module_name row
                               'index': module_name,  # module name
                               'reference product': output[1],  # module product
                               'name': activity.get('name'),  # activity name

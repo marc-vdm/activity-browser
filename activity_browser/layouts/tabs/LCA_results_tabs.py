@@ -1045,8 +1045,10 @@ class ProcessContributionsTab(ContributionTab):
         return super().build_combobox(has_method, has_func)
 
     def update_dataframe(self, *args, **kwargs):
-        """Retrieve the top process contributions"""
+        """Retrieve the top process contributions."""
         # add or remove the 'modules' option if required
+
+        # set the right combobox menu items
         if self.parent.modular_lca:
             if self.switches.currentText() == 'Impact Categories' and \
                     'module' in self.combobox_menu.agg.itemText(self.combobox_menu.agg.count() - 1):
@@ -1072,7 +1074,9 @@ class ProcessContributionsTab(ContributionTab):
         return df
 
     def get_modular_df(self, *args, **kwargs) -> pd.DataFrame:
-        """Provide the dataframe to display in table and figure, properly formatted for cutoff etc."""
+        """Provide the dataframe to display in table and figure, properly formatted for cutoff etc.
+
+        See also msc.modular_lca for more info on the dataframe"""
         method = self.combobox_menu.method.currentText()
         if self.relative:
             abs_rel = 'rel'

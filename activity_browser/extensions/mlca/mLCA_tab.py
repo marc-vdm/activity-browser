@@ -144,135 +144,6 @@ class mLCATab(QtWidgets.QWidget):
         if ok and color:
             msc.set_module_color(module_name, color)
 
-class ModularDatabasesWidget(QtWidgets.QWidget):
-    def __init__(self):
-        super(ModularDatabasesWidget, self).__init__()
-
-        # Buttons
-        self.open_database_button = QtWidgets.QPushButton(qicons.import_db, "Open")
-        self.open_database_button.setToolTip('Open an existing modular database')
-        self.new_database_button = QtWidgets.QPushButton(qicons.add, "New")
-        self.new_database_button.setToolTip('Add a new modular database')
-        self.delete_database_button = QtWidgets.QPushButton(qicons.delete, "Delete")
-        self.delete_database_button.setToolTip('Delete the modular database')
-        self.save_database_button = QtWidgets.QPushButton(mlca_qicons.save_db, "Save")
-        self.save_database_button.setToolTip('Save the modular database')
-        self.save_database_button.setVisible(False)
-        self.saveas_database_button = QtWidgets.QPushButton(mlca_qicons.save_db, "Save as")
-        self.saveas_database_button.setToolTip('Save the modular database to a different file')
-        self.saveas_database_button.setVisible(False)
-
-        self.db_name = None
-        self.db_name_default_label = 'Open a Modular Database or start a new one'
-        self.db_name_widget = QtWidgets.QLabel('[{}]'.format(self.db_name_default_label))
-
-        self.mlca_file_types = 'mLCA files (*.pickle *.mlca)'
-
-        self.connect_signals()
-        self.construct_layout()
-
-    def connect_signals(self):
-        pass
-        self.open_database_button.clicked.connect(self.open_mLCA_db)
-        self.new_database_button.clicked.connect(self.new_mLCA_db)
-        self.delete_database_button.clicked.connect(self.delete_mLCA_db)
-        self.save_database_button.clicked.connect(self.save_mLCA_db)
-        self.saveas_database_button.clicked.connect(self.saveas_mLCA_db)
-
-    def update_state_mLCA_db(self, path, state):
-        if path:
-            self.db_name = Path(path).stem
-
-            update_and_shorten_label(self.db_name_widget, self.db_name)
-            mlca_signals.change_database.emit((path, state))
-        else:
-            # the loading was either canceled or failed somehow
-            if self.db_name:
-                update_and_shorten_label(self.db_name_widget, self.db_name)
-            else:
-                update_and_shorten_label(self.db_name_widget, self.db_name_default_label, enable=False)
-
-        if self.db_name:
-            self.save_database_button.setVisible(True)
-            self.saveas_database_button.setVisible(True)
-        else:
-            self.save_database_button.setVisible(False)
-            self.saveas_database_button.setVisible(False)
-
-        if state == 'delete':
-            mlca_signals.database_selected.emit(False)
-        else:
-            mlca_signals.database_selected.emit(True)
-
-    def open_mLCA_db(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            caption='Select mLCA module database file',
-            filter=self.mlca_file_types)
-        #TODO set default folder with 'dir=..' argument when we have one
-
-        self.update_state_mLCA_db(path, 'open')
-
-    def new_mLCA_db(self):
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            caption='Create a new mLCA module database file',
-            filter=self.mlca_file_types)
-
-        self.update_state_mLCA_db(path, 'new')
-
-    def delete_mLCA_db(self):
-        # TODO dialog to delete file somehow
-        #TODO should ask for confirmation
-        pass
-        path = 'WARNING: NOT IMPLEMENTED'
-        print('+++ deleting mLCa database:', path)
-        mlca_signals.change_database.emit((self.db_name, 'delete'))
-
-    def save_mLCA_db(self):
-        self.update_state_mLCA_db(self.db_name, 'save')
-
-    def saveas_mLCA_db(self):
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            caption='Save your mLCA module database file',
-            filter=self.mlca_file_types)
-
-        # send same signal to save, as only path is required to be different
-        self.update_state_mLCA_db(path, 'save')
-
-    def construct_layout(self):
-        # header
-        header_widget = QtWidgets.QWidget()
-        header_layout = QtWidgets.QHBoxLayout()
-        header_layout.addWidget(header('Database:'))
-        header_layout.addWidget(self.db_name_widget)
-        header_layout.addStretch(1)
-        header_widget.setLayout(header_layout)
-
-        # buttons
-        button_widget = QtWidgets.QWidget()
-        button_layout = QtWidgets.QHBoxLayout()
-        button_layout.addWidget(self.open_database_button)
-        button_layout.addWidget(self.new_database_button)
-        button_layout.addWidget(self.delete_database_button)
-        button_layout.addWidget(self.save_database_button)
-        button_layout.addWidget(self.saveas_database_button)
-        button_layout.addStretch(1)
-        button_widget.setLayout(button_layout)
-
-        # Overall Layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignTop)
-        layout.addWidget(header_widget)
-        layout.addWidget(button_widget)
-        self.setLayout(layout)
-
-        self.setSizePolicy(QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Maximum,
-            QtWidgets.QSizePolicy.Maximum)
-        )
-
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
@@ -295,18 +166,8 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         self._connect_signals()
 
     def _connect_signals(self):
-        mlca_signals.database_selected.connect(self.db_change)
         self.new_module_button.clicked.connect(mlca_signals.new_module.emit)
         self.graph_button.clicked.connect(self.show_modular_system_in_graph)
-
-    def db_change(self, selected):
-        if selected:
-            self.update_widget()
-        else:
-            self.reset_widget()
-
-    def reset_widget(self):
-        pass
 
     def _construct_layout(self):
         header_widget = QtWidgets.QWidget()
@@ -393,11 +254,21 @@ class ModuleWidget(QtWidgets.QWidget):
         tools_widget.setLayout(tools_layout)
         layout.addWidget(tools_widget)
 
-        layout.addWidget(QtWidgets.QLabel('Outputs'))
+        self.outputs_label = QtWidgets.QLabel('Outputs')
+        self.outputs_label.setToolTip('An output is the product that a module produces. Outputs are required for modular calculations.\n'
+                                      'Right click on an activity in the chain to add it as an output.')
+        layout.addWidget(self.outputs_label)
         layout.addWidget(self.outputs_table)
-        layout.addWidget(QtWidgets.QLabel('Chain'))
+        self.chain_label = QtWidgets.QLabel('Chain')
+        self.chain_label.setToolTip('The chain is the supply chain required to produce an output.\n'
+                                    'A chain must be at least one activity long, but can be longer to connect to different modules with cuts.')
+        layout.addWidget(self.chain_label)
         layout.addWidget(self.chain_table)
-        layout.addWidget(QtWidgets.QLabel('Cuts'))
+        self.cuts_label = QtWidgets.QLabel('Cuts')
+        self.cuts_label.setToolTip('A cut is where a module replaces the conventional\n'
+                                   'activity input with another module as input. Cuts are optional.\n'
+                                   'Right click on the activity at the end of the chain to add it as a cut.')
+        layout.addWidget(self.cuts_label)
         layout.addWidget(self.cuts_tree)
         self.setLayout(layout)
 
@@ -422,7 +293,6 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def show_module_in_graph(self):
         print('++ Graph view should be opened')
-        #self.module
 
     def update_widget(self, module_name=''):
         self.module_name = module_name
@@ -431,4 +301,9 @@ class ModuleWidget(QtWidgets.QWidget):
         color = msc.get_modular_system.get_module(module_name).color
         self.output_scaling_checkbox.setChecked(obs)
         self.module_color_editor.setStyleSheet("background-color: {}".format(color))
+        if len(self.cuts_tree.model.full_cuts) == 0:
+            self.cuts_label.setText('There are no cuts in this module.')
+        else:
+            self.cuts_label.setText('Cuts')
+
         self.show()
