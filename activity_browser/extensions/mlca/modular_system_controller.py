@@ -147,6 +147,9 @@ class ModularSystemController(object):
         self.get_raw_data
         if full_system:
             self.modular_system = self.get_modular_system_from_raw(self.raw_data)
+        self.get_outputs()
+        self.get_affected_activities()
+        self.get_related_activities()
 
     # EDITING FULL MODULES
     # create/remove/copy entire modules
