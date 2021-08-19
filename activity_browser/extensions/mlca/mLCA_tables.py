@@ -15,8 +15,7 @@ from activity_browser.signals import signals
 from activity_browser.ui.tables.delegates import *
 
 class ModuleDatabaseTable(ABDataFrameView):
-    """ TODO description
-    """
+    """Table that shows all modules in the modular system."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().setVisible(False)
@@ -47,13 +46,9 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.table_name = 'modules'
 
     def _connect_signals(self):
-        #TODO link these signals
-
-
         self.doubleClicked.connect(
             lambda: mlca_signals.module_selected.emit(self.selected_module_name)
-        ) #TODO link this also to graph view opening??
-
+        )
         self.model.updated.connect(self.update_proxy_model)
         self.model.updated.connect(self.custom_view_sizing)
 
@@ -69,7 +64,6 @@ class ModuleDatabaseTable(ABDataFrameView):
         )
 
     def contextMenuEvent(self, event) -> None:
-        #TODO add context items
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.delete_module_action)
         menu.addAction(self.copy_module_action)
@@ -90,8 +84,7 @@ class ModuleDatabaseTable(ABDataFrameView):
         return self.model.get_unit_names(proxy)
 
 class GenericModuleTable(ABDataFrameView):
-    """ TODO description
-        """
+    """Superclass for Outputs and Chain tables."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().setVisible(False)
@@ -113,10 +106,6 @@ class GenericModuleTable(ABDataFrameView):
         )
 
     def _connect_signals(self):
-        #TODO link these signals
-        pass
-        #mlca_signals.module_selected.connect(self.update_table)
-
         self.open_activity_action.triggered.connect(
             lambda: signals.open_activity_tab.emit(self.get_selected_key))
         self.open_graph_action.triggered.connect(
@@ -153,12 +142,8 @@ class GenericModuleTable(ABDataFrameView):
     def remove_activity(self):
         raise NotImplementedError("This function is not implemented")
 
-    def update_table(self):
-        pass
-
 class ModuleOutputsTable(GenericModuleTable):
-    """ TODO description
-    """
+    """Table for module outputs."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -192,8 +177,7 @@ class ModuleOutputsTable(GenericModuleTable):
         mlca_signals.remove_from_output.emit((self.model.module_name, output))
 
 class ModuleChainTable(GenericModuleTable):
-    """ TODO description
-    """
+    """Table for module chain."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -238,8 +222,7 @@ class ModuleChainTable(GenericModuleTable):
         mlca_signals.remove_from_chain.emit((self.model.module_name, self.get_selected_key))
 
 class ModuleCutsTree(ABDictTreeView):
-    """ TODO description
-    """
+    """Tree view for module cuts."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
