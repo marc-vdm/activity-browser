@@ -48,8 +48,8 @@ class mLCATab(QtWidgets.QWidget):
         mlca_signals.module_db_changed.connect(self.update_widgets)
         mlca_signals.module_selected.connect(self.update_widgets)
 
-        mlca_signals.import_modular_system.connect(self.import_modules)
-        mlca_signals.export_modules.connect(self.export_modules)
+        mlca_signals.import_modular_system.connect(self.import_modules_dialog)
+        mlca_signals.export_modules.connect(self.export_modules_dialog)
         mlca_signals.new_module.connect(self.new_module_dialog)
         mlca_signals.new_module_from_act.connect(self.new_module_dialog)
         mlca_signals.del_module.connect(self.del_module_dialog)
@@ -69,13 +69,17 @@ class mLCATab(QtWidgets.QWidget):
         self.modular_database_widget.update_widget()
 
         if not no_modules:
+            # there are modules
             self.modular_database_widget.label_no_modules.hide()
             self.modular_database_widget.graph_button.show()
             self.modular_database_widget.table.show()
+            self.modular_database_widget.export_button.show()
         else:
+            # there are no modules
             self.modular_database_widget.label_no_modules.show()
             self.modular_database_widget.graph_button.hide()
             self.modular_database_widget.table.hide()
+            self.modular_database_widget.export_button.hide()
             self.module_widget.hide()
         self.resize_splitter()
 
@@ -86,7 +90,7 @@ class mLCATab(QtWidgets.QWidget):
         sizes = [x.sizeHint().height() for x in widgets]
         self.splitter.setSizes(sizes)
 
-    def import_modules(self):
+    def import_modules_dialog(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
             caption='Select module data file',
@@ -95,7 +99,7 @@ class mLCATab(QtWidgets.QWidget):
         if path:
             msc.import_modules(path)
 
-    def export_modules(self, export_names: list):
+    def export_modules_dialog(self, export_names: list):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             caption='Export modules to file',
@@ -104,7 +108,6 @@ class mLCATab(QtWidgets.QWidget):
         if path:
             if not path.endswith('.mlca'):
                 path += '.mlca'
-            #msc.save_modular_system(path=path)
             msc.export_modules(export_names, path)
 
     def new_module_dialog(self, activity=None):
@@ -187,7 +190,7 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
 
         # Labels
         self.label_no_modules = QtWidgets.QLabel(
-            "Start a new module by pressing the 'New' button"
+           "Start a New module or Import modules"
         )
 
         # Buttons
@@ -219,10 +222,10 @@ class ModularDatabaseWidget(QtWidgets.QWidget):
         header_layout.setAlignment(QtCore.Qt.AlignLeft)
         header_layout.addWidget(header("Modules:"))
         header_layout.addWidget(self.new_module_button)
-        header_layout.addWidget(self.label_no_modules)
-        header_layout.addStretch()
         header_layout.addWidget(self.import_button)
         header_layout.addWidget(self.export_button)
+        header_layout.addWidget(self.label_no_modules)
+        header_layout.addStretch()
         header_layout.addWidget(self.graph_button)
         header_widget.setLayout(header_layout)
 
