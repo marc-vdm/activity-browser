@@ -5,6 +5,10 @@ class MlcaSignals(QObject):
     """ Signals used for the Activity Browser should be defined here.
     While arguments can be passed to signals, it is good practice not to do this if possible. """
 
+    # db management
+    import_modular_system = Signal()
+    export_modules = Signal(list)
+
     # modules
     new_module = Signal()
     new_module_from_act = Signal(tuple)

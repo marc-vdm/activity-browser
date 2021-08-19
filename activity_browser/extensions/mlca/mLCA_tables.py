@@ -42,6 +42,9 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.rename_module_action = QtWidgets.QAction(
             qicons.edit, "Rename module", None
         )
+        self.export_modules_action = QtWidgets.QAction(
+            mlca_qicons.save_db, "Export module(s)", None
+        )
 
         self.model = ModuleDatabaseModel(parent=self)
         self.setDragEnabled(True)
@@ -74,6 +77,9 @@ class ModuleDatabaseTable(ABDataFrameView):
         self.rename_module_action.triggered.connect(
             lambda: mlca_signals.rename_module.emit(self.selected_module_name)
         )
+        self.export_modules_action.triggered.connect(
+            lambda: mlca_signals.export_modules.emit(self.selected_modules_names)
+        )
 
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu(self)
@@ -84,6 +90,7 @@ class ModuleDatabaseTable(ABDataFrameView):
         else:
             menu.addAction(self.delete_modules_action)
             menu.addAction(self.copy_modules_action)
+        menu.addAction(self.export_modules_action)
 
         menu.exec_(event.globalPos())
 
