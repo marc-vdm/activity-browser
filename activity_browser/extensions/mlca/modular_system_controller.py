@@ -31,6 +31,7 @@ class ModularSystemController(object):
     def connect_signals(self) -> None:
         signals.project_selected.connect(self.project_change)
         mlca_signals.copy_module.connect(self.copy_module)
+        mlca_signals.copy_modules.connect(self.copy_modules)
         mlca_signals.module_db_changed.connect(self.get_affected_activities)
         mlca_signals.module_db_changed.connect(self.get_related_activities)
         mlca_signals.module_set_obs.connect(self.set_output_based_scaling)
@@ -125,7 +126,7 @@ class ModularSystemController(object):
     # EDITING FULL MODULES
     # create/remove/copy entire modules
 
-    def add_module(self, module_name: str, outputs=[], chain=[], cuts=[], *args, **kwargs) -> None:
+    def add_module(self, module_name: str, outputs=[], chain=[], cuts=[], save=True, *args, **kwargs) -> None:
         """Add module to modular system."""
         # get modular system
         modular_system = self.get_modular_system
@@ -139,11 +140,12 @@ class ModularSystemController(object):
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 
-        # save the updated modular system to disk
-        self.save_modular_system()
-        mlca_signals.module_db_changed.emit()
+        if save:
+            # save the updated modular system to disk
+            self.save_modular_system()
+            mlca_signals.module_db_changed.emit()
 
-    def del_module(self, module_name: str) -> None:
+    def del_module(self, module_name: str, save=True) -> None:
         """Delete module from modular system."""
         # get modular system
         modular_system = self.get_modular_system
@@ -153,12 +155,13 @@ class ModularSystemController(object):
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 
-        # save the updated modular system to disk
-        self.save_modular_system()
-        mlca_signals.module_db_changed.emit()
+        if save:
+            # save the updated modular system to disk
+            self.save_modular_system()
+            mlca_signals.module_db_changed.emit()
 
-    def copy_module(self, module_name: str, copy_name=None) -> None:
-        """Copy module in modular system, copy name is 'original_COPY'."""
+    def copy_module(self, module_name: str, copy_name=None, save=True) -> None:
+        """Copy module in modular system, default copy name is 'original_COPY'."""
         # get data to copy
         for raw_module in self.raw_data:
             if raw_module['name'] == module_name:
@@ -168,7 +171,14 @@ class ModularSystemController(object):
             module['module_name'] = module['name'] + '_COPY'
         else:
             module['module_name'] = copy_name
-        self.add_module(**module)
+
+        self.add_module(**module, save=save)
+
+    def copy_modules(self, module_names):
+        """Copy multiple modules in modular system."""
+        for module_name in module_names:
+            self.copy_module(module_name, save=False)
+        self.save_modular_system()
         mlca_signals.module_db_changed.emit()
 
     # EDITING DATA IN MODULES
