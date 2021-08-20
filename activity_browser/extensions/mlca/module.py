@@ -42,13 +42,26 @@ class Module(object):
         self.outputs = self.pad_outputs(outputs)
         self.mapping, self.demand, self.matrix, self.supply_vector = \
             self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
-        self.get_edge_lists()
-        self.pad_cuts()
+        self.get_edge_lists
+        self.pad_cuts
         self.color = color
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
+
+    @property
+    def update_module(self) -> None:
+        """Update the module if changes were written to data like cuts, chain or outputs."""
+        self.chain = self.remove_cuts_from_chain(list(self.chain), self.cuts)
+        self.filtered_database = self.getFilteredDatabase(self.chain)
+        self.edges = self.construct_graph(self.filtered_database)
+        self.scaling_activities, self.isSimple = self.getScalingActivities(self.chain, self.edges)
+        self.outputs = self.pad_outputs(self.outputs)
+        self.mapping, self.demand, self.matrix, self.supply_vector = \
+            self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
+        self.get_edge_lists
+        self.pad_cuts
 
     def remove_cuts_from_chain(self, chain: list, cuts: list) -> set:
         """Remove chain items if they are the parent of a cut. Otherwise this leads to unintended LCIA results."""
@@ -206,7 +219,8 @@ class Module(object):
                     demand[mapping[sa]] += o[2]
         return mapping, demand, matrix, np.linalg.solve(matrix, demand).tolist()
 
-    def get_edge_lists(self) -> list:
+    @property
+    def get_edge_lists(self) -> None:
         """Get lists of external and internal edges with original flow values or scaled to the module."""
         self.external_edges = \
             [x for x in self.edges if (x[0] not in self.chain and x[:2] not in set([y[:2] for y in self.cuts]))]
@@ -222,6 +236,7 @@ class Module(object):
         self.internal_scaled_edges_with_cuts = \
             [(x[0], x[1], x[2] * self.supply_vector[self.mapping[x[1]]]) for x in self.internal_edges_with_cuts]
 
+    @property
     def pad_cuts(self) -> None:
         """Makes sure that each cut includes the amount that is cut. This is retrieved from self.internal_scaled_edges_with_cuts."""
         for i, c in enumerate(self.cuts):
