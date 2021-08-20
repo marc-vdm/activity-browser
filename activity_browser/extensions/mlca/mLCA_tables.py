@@ -229,15 +229,24 @@ class ModuleChainTable(GenericModuleTable):
         menu.addAction(self.open_activity_action)
         menu.addAction(self.open_graph_action)
         menu.addAction(self.add_output_action)
+        menu.addAction(self.add_cut_action)
+        menu.addAction(self.remove_activity_action)
 
-        # check if 'add to cut' should be enabled
         module = self.model.module
         key = self.get_selected_key
         if module.internal_edges_with_cuts:
             parents, children, value = zip(*module.internal_edges_with_cuts)
+            # check if 'add to cut' should be enabled
             if key not in children:
-                menu.addAction(self.add_cut_action)
-        menu.addAction(self.remove_activity_action)
+                self.add_cut_action.setEnabled(True)
+            else:
+                self.add_cut_action.setDisabled(True)
+            # check if 'remove activity' should be enabled
+            if key not in children or key in module.output_keys:
+                self.remove_activity_action.setEnabled(True)
+            else:
+                self.remove_activity_action.setDisabled(True)
+
         menu.exec_(event.globalPos())
 
     def add_output(self):

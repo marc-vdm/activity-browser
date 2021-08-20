@@ -74,36 +74,36 @@ class GenericEditableDragModuleModel(GenericModuleModel):
         """
         return super().flags(index) | Qt.ItemIsEditable | Qt.ItemIsDragEnabled
 
-    def setData(self, index: QModelIndex, value, role=Qt.EditRole):
-        """Whenever data is changed, call an update to the relevant exchange
-                or activity.
-                """
-        key = self.get_activity_key(index)
-        custom_name = self._dataframe.iat[index.row(), 0]
-        amount = self._dataframe.iat[index.row(), 1]
-        old_output = (key, custom_name, amount)
-
-        header = self._dataframe.columns[index.column()]
-        if header == 'custom name':
-            custom_name = value
-        elif header == 'quantity':
-            amount = value
-
-        new_output = (key, custom_name, amount)
-
-        if old_output != new_output:
-            module_old_new = (self.module_name, old_output, new_output)
-            mlca_signals.alter_output.emit(module_old_new)
-        return True
-
 class ModuleOutputsModel(GenericEditableDragModuleModel):
     """Contain data for outputs in module."""
-    HEADERS = ["custom name", "quantity", "unit", "product", "name", "location", "database", "key"]
+    HEADERS = ["module product", "amount", "name", "unit", "location", "reference product", "database", "key"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.connect_signals()
+
+    def setData(self, index: QModelIndex, value, role=Qt.EditRole):
+        """Whenever data is changed, call an update to the relevant exchange
+                or activity.
+                """
+        key = self.get_activity_key(index)
+        module_product = self._dataframe.iat[index.row(), 0]
+        amount = self._dataframe.iat[index.row(), 1]
+        old_output = (key, module_product, amount)
+
+        header = self._dataframe.columns[index.column()]
+        if header == self.HEADERS[0]:
+            module_product = value
+        elif header == self.HEADERS[1]:
+            amount = value
+
+        new_output = (key, module_product, amount)
+
+        if old_output != new_output:
+            module_old_new = (self.module_name, old_output, new_output)
+            mlca_signals.alter_output.emit(module_old_new)
+        return True
 
     def sync(self, module_name: str) -> None:
         self.module_name = module_name
@@ -118,16 +118,16 @@ class ModuleOutputsModel(GenericEditableDragModuleModel):
                 output_keys.append((key, output[-2], output[-1]))
 
         data = []
-        for out_key, custom_name, quantity in output_keys:
+        for out_key, module_product, amount in output_keys:
             db = AB_metadata.get_database_metadata(out_key[0])
             row = db[db['key'] == out_key]
             data.append({
-                "custom name": custom_name,
-                "quantity": quantity,
-                "unit": row['unit'].values[0],
-                "product": row['reference product'].values[0],
+                "module product": module_product,
+                "amount": amount,
                 "name": row['name'].values[0],
+                "unit": row['unit'].values[0],
                 "location": row['location'].values[0],
+                "reference product": row['reference product'].values[0],
                 "database": out_key[0],
                 "key": out_key
             })
@@ -146,7 +146,7 @@ class ModuleOutputsModel(GenericEditableDragModuleModel):
 
 class ModuleChainModel(GenericModuleModel):
     """Contain data for chain in module."""
-    HEADERS = ["product", "name", "location", "unit", "database", "key"]
+    HEADERS = ["reference product", "name", "unit", "location", "database", "key"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -173,8 +173,7 @@ class ModuleChainModel(GenericModuleModel):
                 db = db[db['key'].isin(chain)]
                 chain_df = pd.concat([chain_df, db])
 
-            chain_df = chain_df[["reference product", "name", "location", "unit", "database", "key"]]
-            chain_df.rename(columns={"reference product": "product"}, inplace=True)
+            chain_df = chain_df[self.HEADERS]
             self._dataframe = chain_df
 
         self.key_col = self._dataframe.columns.get_loc("key")
@@ -190,7 +189,7 @@ class ModuleCutsItem(TreeItem):
 
 class ModuleCutsModel(BaseTreeModel):
     """Contain data for chain in module."""
-    HEADERS = ["product", "name", "location", "amount", "unit", "database", "key", "cut"]
+    HEADERS = ["product", "amount", "name", "unit", "location", "database", "key", "cut"]
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -278,10 +277,10 @@ class ModuleCutsModel(BaseTreeModel):
             row = db[db['key'] == cut_key]
             data.append({
                 "product": row['reference product'].values[0],
-                "name": row['name'].values[0],
-                "location": row['location'].values[0],
                 "amount": amount,
+                "name": row['name'].values[0],
                 "unit": row['unit'].values[0],
+                "location": row['location'].values[0],
                 "database": cut_key[0],
                 "key": cut_key,
                 "cut": cut
