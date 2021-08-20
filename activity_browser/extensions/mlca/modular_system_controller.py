@@ -575,7 +575,7 @@ class ModularSystemController(object):
 
         abs_line_dict = {}
         rel_line_dict = {}
-        paths = []
+        r_paths = []
         products = set()
 
         # get some required data
@@ -589,10 +589,10 @@ class ModularSystemController(object):
                 products.add(product_name)
                 if prod_mod not in prod_mods:
                     prod_mods.append(prod_mod)
-            paths.append(readable_path)
+            r_paths.append(readable_path)
+            result['readable path'] = readable_path
 
-            result['path'] = readable_path
-        method = result['LCIA method'] # method does not change in one set of results
+        method = result['LCIA method']  # method does not change in one set of results
 
         # assemble lines
 
@@ -609,10 +609,10 @@ class ModularSystemController(object):
                               'location': '',  # empty for product
                               'database': '',  # empty for product
                               }
-            product_paths = dict({p: 0 for p in paths}, **meta_line_dict)
+            product_paths = dict({p: 0 for p in r_paths}, **meta_line_dict)
             product_lines_abs[product_name] = product_paths
             meta_line_dict['abs_rel'] = 'rel'
-            product_paths = dict({p: 0 for p in paths}, **meta_line_dict)
+            product_paths = dict({p: 0 for p in r_paths}, **meta_line_dict)
             product_lines_rel[product_name] = product_paths
 
         # assembly
@@ -633,15 +633,16 @@ class ModularSystemController(object):
 
             for result in results:
                 path = result['path']
+                r_path = result['readable path']
                 if module_name in path:
-                    abs_line_dict[path] = result['module contribution'][module_name]
-                    rel_line_dict[path] = result['relative module contribution'][module_name]
+                    abs_line_dict[r_path] = result['module contribution'][module_name]
+                    rel_line_dict[r_path] = result['relative module contribution'][module_name]
                     if product_name in path:
-                        product_lines_abs[product_name][path] = result['module contribution'][module_name]
-                        product_lines_rel[product_name][path] = result['relative module contribution'][module_name]
+                        product_lines_abs[product_name][r_path] = result['module contribution'][module_name]
+                        product_lines_rel[product_name][r_path] = result['relative module contribution'][module_name]
                 else:
-                    abs_line_dict[path] = 0
-                    rel_line_dict[path] = 0
+                    abs_line_dict[r_path] = 0
+                    rel_line_dict[r_path] = 0
 
             # create the absolute line
             line_dict = dict(meta_line_dict, **abs_line_dict)
@@ -656,6 +657,6 @@ class ModularSystemController(object):
             data.append(product_lines_abs[product_name])
             data.append(product_lines_rel[product_name])
 
-        return data, paths
+        return data, r_paths
 
 modular_system_controller = ModularSystemController()
