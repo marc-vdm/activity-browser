@@ -219,7 +219,6 @@ class ActivityTab(QtWidgets.QWidget):
 
     @Slot(bool, name="toggleModules")
     def show_modules_data(self, toggled: bool) -> None:
-        print('Module data button toggled to:', toggled)
         self.activity_data_grid.hide_show_module_data(toggled)
 
     @Slot(bool, name="toggleReadOnly")
