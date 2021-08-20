@@ -166,10 +166,10 @@ class ModularSystemController(object):
 
         # add the new module
         modular_system.add_module(module_list=[{'name': module_name,
-                                        'outputs': outputs,
-                                        'chain': chain,
-                                        'cuts': cuts
-                                            }])
+                                                'outputs': outputs,
+                                                'chain': chain,
+                                                'cuts': cuts
+                                                }])
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 
