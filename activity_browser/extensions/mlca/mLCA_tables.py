@@ -202,7 +202,7 @@ class ModuleOutputsTable(GenericModuleTable):
 
     def remove_output(self):
         output = self.model.get_output_data(self.currentIndex())
-        mlca_signals.remove_from_output.emit((self.model.module_name, output))
+        mlca_signals.remove_from_outputs.emit((self.model.module_name, output))
 
 class ModuleChainTable(GenericModuleTable):
     """Table for module chain."""
@@ -241,10 +241,10 @@ class ModuleChainTable(GenericModuleTable):
         menu.exec_(event.globalPos())
 
     def add_output(self):
-        mlca_signals.add_to_output.emit((self.model.module_name, self.get_selected_key))
+        mlca_signals.add_to_outputs.emit((self.model.module_name, self.get_selected_key))
 
     def add_cut(self):
-        mlca_signals.add_to_cut.emit((self.model.module_name, self.get_selected_key))
+        mlca_signals.add_to_cuts.emit((self.model.module_name, self.get_selected_key))
 
     def remove_activity(self):
         mlca_signals.remove_from_chain.emit((self.model.module_name, self.get_selected_key))
@@ -346,7 +346,7 @@ class ModuleCutsTree(ABDictTreeView):
             menu.exec_(event.globalPos())
 
     def remove_cut(self):
-        mlca_signals.remove_from_cut.emit((self.model.module_name, self.get_selected_cut, 'cut tree view'))
+        mlca_signals.remove_from_cuts.emit((self.model.module_name, self.get_selected_cut, 'cut tree view'))
 
     def update_tree(self):
         pass

@@ -39,12 +39,12 @@ class ModularSystemController(object):
         mlca_signals.add_to_chain.connect(self.add_to_chain)
         mlca_signals.remove_from_chain.connect(self.remove_from_chain)
 
-        mlca_signals.add_to_cut.connect(self.add_to_cut)
-        mlca_signals.remove_from_cut.connect(self.remove_from_cut)
+        mlca_signals.add_to_cuts.connect(self.add_to_cuts)
+        mlca_signals.remove_from_cuts.connect(self.remove_from_cuts)
         mlca_signals.alter_cut.connect(self.alter_cut)
 
-        mlca_signals.add_to_output.connect(self.add_to_output)
-        mlca_signals.remove_from_output.connect(self.remove_from_output)
+        mlca_signals.add_to_outputs.connect(self.add_to_outputs)
+        mlca_signals.remove_from_outputs.connect(self.remove_from_outputs)
         mlca_signals.replace_output.connect(self.replace_output)
         mlca_signals.alter_output.connect(self.alter_output)
 
@@ -263,9 +263,9 @@ class ModularSystemController(object):
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         # (potentially) remove from outputs
-        self.remove_from_output(module_key, update=False)
+        self.remove_from_outputs(module_key, update=False)
         # (potentially) remove from cuts
-        self.remove_from_cut((module_name, key, 'chain'), update=False)
+        self.remove_from_cuts((module_name, key, 'chain'), update=False)
         # remove from chain
         for chn in self.get_modular_system.get_module(module_name).chain:
             if chn == key:
@@ -276,7 +276,7 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_cut(self, module_key: tuple) -> None:
+    def add_to_cuts(self, module_key: tuple) -> None:
         """Add activity to cut.
 
         module_key is a tuple with (module_name, activity key)"""
@@ -292,19 +292,20 @@ class ModularSystemController(object):
                 print("Cannot add cut. Activity is linked to another activity.")
             else:
                 new_cuts = [(key, pcv[1], "Unspecified Input", pcv[2])
-                            for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]
+                            for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]  # pcv = parents, children, value
                 for new_cut in new_cuts:
-                    self.get_modular_system.get_module(module_name).cuts.append(new_cut)
-                    chain = self.get_modular_system.get_module(module_name).chain
-                # remove the cut from the chain
-                self.get_modular_system.get_module(module_name).remove_cuts_from_chain(chain, new_cuts)
+                   self.get_modular_system.get_module(module_name).cuts.append(new_cut)
+                all_cuts = module.cuts
+                # update the chain
+                new_chain = module.remove_cuts_from_chain(list(module.chain), all_cuts)
+                self.get_modular_system.get_module(module_name).chain = new_chain
 
                 self.update_modular_system()
                 mlca_signals.module_db_changed.emit()
                 mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_cut(self, module_key_src: tuple, update=True) -> None:
-        """Remove activity from output.
+    def remove_from_cuts(self, module_key_src: tuple, update=True) -> None:
+        """Remove activity from cuts.
 
         Adds the 'cut' activity to the chain if the key is not being removed from the chain.
         module_key_src is a tuple with (module_name, activity key OR cut, source info)"""
@@ -339,7 +340,7 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_output(self, module_key: tuple) -> None:
+    def add_to_outputs(self, module_key: tuple) -> None:
         """Add activity to output.
 
         module_key is a tuple with (module_name, activity key)"""
@@ -352,7 +353,7 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def remove_from_output(self, module_out: tuple, update=True) -> None:
+    def remove_from_outputs(self, module_out: tuple, update=True) -> None:
         """Remove activity from output.
 
         module_out is a tuple with (module_name, output)"""
