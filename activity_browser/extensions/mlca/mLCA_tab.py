@@ -287,6 +287,7 @@ class ModuleWidget(QtWidgets.QWidget):
         mlca_signals.rename_module.connect(self.reset_widget)
         mlca_signals.module_selected.connect(self.update_widget)
         mlca_signals.module_color_set.connect(self.update_widget)
+        mlca_signals.module_changed.connect(self.update_widget)
         self.module_name_field.editingFinished.connect(self.module_name_change)
         self.module_color_editor.clicked.connect(self.change_module_color)
         self.output_scaling_checkbox.toggled.connect(self.output_based_scaling_editor)

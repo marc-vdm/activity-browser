@@ -212,10 +212,19 @@ class ModularSystemController(object):
     # EDITING DATA IN MODULES
     # make changes to chain/outputs/cuts or other module data
 
+    def update_module(self, module_name) -> None:
+        """Update a single module after making changes that do not affect other modules.
+
+        Updates to modules are only required when making changes to Outputs, Chain or Cuts
+        This function is called after changes are made to a module and the module data needs to be updated.
+        Should be called after updating the whole modular system."""
+        self.modular_system.get_module(module_name).update_module
+
     def update_modular_system(self) -> None:
         """Update the modular system after making changes to a module.
 
-        This function is called after changes are made to a module and the modular system needs to be updated."""
+        This function is called after changes are made to a module and the modular system needs to be updated.
+        Should be called before updating individual modules."""
         self.modular_system.update(self.modular_system.get_modules())
         # update the raw data
         self.raw_data = self.modular_system.raw_data
@@ -254,6 +263,7 @@ class ModularSystemController(object):
 
         if update:
             self.update_modular_system()
+            self.update_module(module_name)
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
@@ -273,6 +283,7 @@ class ModularSystemController(object):
                 break
 
         self.update_modular_system()
+        self.update_module(module_name)
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
@@ -301,6 +312,7 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).chain = new_chain
 
                 self.update_modular_system()
+                self.update_module(module_name)
                 mlca_signals.module_db_changed.emit()
                 mlca_signals.module_changed.emit(module_name)
 
@@ -321,6 +333,7 @@ class ModularSystemController(object):
 
         if update:
             self.update_modular_system()
+            self.update_module(module_name)
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
@@ -337,6 +350,7 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).cuts[i] = new_cut
 
         self.update_modular_system()
+        self.update_module(module_name)
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
@@ -349,6 +363,7 @@ class ModularSystemController(object):
         self.get_modular_system.get_module(module_name).outputs.append((key, ref_prod, 1.0))
 
         self.update_modular_system()
+        self.update_module(module_name)
         self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
@@ -366,6 +381,7 @@ class ModularSystemController(object):
 
         if update:
             self.update_modular_system()
+            self.update_module(module_name)
             self.get_outputs()
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
@@ -385,6 +401,7 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
 
         self.update_modular_system()
+        self.update_module(module_name)
         self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
@@ -402,6 +419,7 @@ class ModularSystemController(object):
                 self.get_modular_system.get_module(module_name).outputs[i] = new_output
 
         self.update_modular_system()
+        self.update_module(module_name)
         self.get_outputs()
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
