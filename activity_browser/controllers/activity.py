@@ -79,6 +79,7 @@ class ActivityController(QObject):
             ParameterController.delete_activity_parameter(act.key)
             act.delete()
             AB_metadata.update_metadata(act.key)
+            signals.activity_deleted.emit(act.key)
 
         # After deletion, signal that the database has changed
         db = next(iter(activities)).get("database")
