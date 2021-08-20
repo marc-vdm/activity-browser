@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtCore, QtWidgets
-from pathlib import Path
 
 from activity_browser.ui.style import header
 from activity_browser.ui.icons import qicons
 
 from activity_browser.signals import signals
-from activity_browser.bwutils.commontasks import update_and_shorten_label
 
 from .mLCA_tables import (
     ModuleDatabaseTable,
@@ -110,7 +108,7 @@ class mLCATab(QtWidgets.QWidget):
                 path += '.mlca'
             msc.export_modules(export_names, path)
 
-    def new_module_dialog(self, activity=None):
+    def new_module_dialog(self, activity_key=None):
         """Dialog to add a new module to the modular system"""
         name, ok = QtWidgets.QInputDialog.getText(
             self.window,
@@ -120,8 +118,10 @@ class mLCATab(QtWidgets.QWidget):
 
         if ok and name:
             if name not in msc.module_names:
-                if activity:
-                    msc.add_module(name, chain=[activity])
+                if activity_key:
+                    msc.add_module(module_name=name,
+                                   chain=[activity_key])
+                    msc.add_to_outputs((name, activity_key))
                 else:
                     msc.add_module(name)
                 mlca_signals.module_selected.emit(name)
