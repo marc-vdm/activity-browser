@@ -88,13 +88,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
         # module label
         self.module_label = QtWidgets.QLabel('Modules')
-        self.module_label.setToolTip("Start a new or add this unit process to a module")
-
-        # module combobox
-        # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new or existing module
-        self.module_combo = QtWidgets.QComboBox()
-        self.populate_module_combo()
-        self.module_combo.setToolTip("Add this activity to a module")
 
         # module field
         self.module_field = QtWidgets.QWidget()
@@ -102,6 +95,17 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.assemble_module_field()
         self.module_field.setLayout(self.module_field_layout)
         self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
+
+        # module combobox
+        # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new or existing module
+        self.module_combo_field = QtWidgets.QWidget()
+        self.module_combo_field_layout = QtWidgets.QHBoxLayout()
+        self.module_combo_field_layout.addWidget(QtWidgets.QLabel('Add to module:'))
+        self.module_combo = QtWidgets.QComboBox()
+        self.module_combo_field_layout.addWidget(self.module_combo)
+        self.module_combo_field.setLayout(self.module_combo_field_layout)
+        self.populate_module_combo()
+        self.module_combo.setToolTip("Add this activity to a new or existing module")
 
         # arrange widgets for display as a grid
         self.grid = QtWidgets.QGridLayout()
@@ -118,8 +122,9 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.grid.addWidget(self.database_combo, 3, 2, 1, -1)
         self.grid.addWidget(self.database_label, 3, 1)
         self.grid.addWidget(self.module_label, 4, 1)
-        self.grid.addWidget(self.module_combo, 4, 2)
-        self.grid.addWidget(self.module_field, 4, 3)
+        self.grid.addWidget(self.module_field, 4, 2)
+        self.grid.addWidget(self.module_combo_field, 4, 3)
+
 
         self.setLayout(self.grid)
 
@@ -195,12 +200,13 @@ class ActivityDataGrid(QtWidgets.QWidget):
         for module_name in current_active_modules.keys():
             widget = self.module_field_layout.itemAt(current_active_modules[module_name]).widget()
 
-            # remove modules that are do not contain activity anymore
+            # remove modules that are removed or do not contain activity anymore
             if module_name not in msc.module_names or \
                     self.parent.key not in msc.affected_activities[module_name]:
                 # either module does not exist anymore or activity not in module anymore
                 self.module_field_layout.removeWidget(widget)
                 widget.deleteLater()
+                continue
 
             # re-write tag-color
             color = msc.get_modular_system.get_modules([module_name])[0].color
@@ -301,6 +307,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
     def hide_show_module_data(self, toggled=False):
         self.module_label.setVisible(toggled)
-        self.module_combo.setVisible(toggled)
+        self.module_combo_field.setVisible(toggled)
         self.module_field.setVisible(toggled)
 
