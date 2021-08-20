@@ -47,6 +47,7 @@ class Signals(QObject):
     open_activity_graph_tab = Signal(tuple)
     delete_activity = Signal(tuple)
     delete_activities = Signal(list)
+    activity_deleted = Signal(tuple)
 
     # Activity editing
     edit_activity = Signal(str)  # db_name

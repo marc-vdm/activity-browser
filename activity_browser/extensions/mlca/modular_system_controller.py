@@ -48,6 +48,11 @@ class ModularSystemController(object):
         mlca_signals.replace_output.connect(self.replace_output)
         mlca_signals.alter_output.connect(self.alter_output)
 
+        signals.exchange_modified.connect(self.db_exchange_modified)
+        signals.exchanges_deleted.connect(self.db_exchange_deleted)
+        signals.activity_modified.connect(self.db_activity_modified)
+        signals.activity_deleted.connect(self.db_activity_deleted)
+
     def project_change(self) -> None:
         """Get projects new modular system location, resets class data."""
         # update the project/folder now that the old location is saved to
@@ -208,6 +213,51 @@ class ModularSystemController(object):
             self.copy_module(module_name, save=False)
         self.save_modular_system()
         mlca_signals.module_db_changed.emit()
+
+    # EDITING DATA IN MODULES - FROM ACTIVITY CHANGES
+    # change modules due to changes made to activities (like removing an exchange)
+
+    def db_activity_modified(self, key: tuple, field: str, value: object) -> None:
+        """Edit references to edited activities in modules."""
+        self.activity_modify(self.module_names, key)
+
+    def db_activity_deleted(self, key: tuple) -> None:
+        """Remove references to deleted activities in modules."""
+        self.activity_delete(self.module_names, key)
+
+    def db_exchange_modified(self, exchange: object, field: str, value: object) -> None:
+        """Edit references to edited activities in modules."""
+        check_modules = set()
+        key_in = exchange.input.key
+        key_out = exchange.output.key
+        for module_name in self.module_names:
+            if key_out in self.affected_activities.get(module_name, False):
+                check_modules.add(module_name)
+        self.activity_modify(list(check_modules), key_in)
+
+    def db_exchange_deleted(self, exchanges: list) -> None:
+        """Remove references to deleted activities in modules."""
+        check_modules = set()
+        for exchange in exchanges:
+            key_in = exchange.input.key
+            key_out = exchange.output.key
+            for module_name in self.module_names:
+                if key_out in self.affected_activities.get(module_name, False):
+                    check_modules.add(module_name)
+            self.activity_delete(list(check_modules), key_in)
+
+    def activity_modify(self, module_names, key):
+        """Determine if the changed activity requires changes to the modular system, and perform them."""
+        for module_name in module_names:
+            if key in self.affected_activities.get(module_name, False):
+                self.update_module(module_name)
+                mlca_signals.module_changed.emit(module_name)
+
+    def activity_delete(self, module_names, key):
+        """Determine if the deleted activity requires changes to the modular system, and perform them."""
+        for module_name in module_names:
+            if key in self.affected_activities.get(module_name, False):
+                self.remove_from_chain((module_name, key))
 
     # EDITING DATA IN MODULES
     # make changes to chain/outputs/cuts or other module data
