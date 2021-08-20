@@ -47,6 +47,7 @@ class Module(object):
         self.color = color
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
+        self.output_keys = [o[0] for o in self.outputs]
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
 

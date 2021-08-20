@@ -196,52 +196,17 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         submenu_copy.addAction(self.copy_exchanges_for_SDF_action)
         menu.addMenu(submenu_copy)
 
-        available_modules, other_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
-        if len(available_modules) > 0 and len(other_modules) > 0:
+        available_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(available_modules) > 0:
             menu.addSeparator()
-            sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            if len(available_modules) > 1:
+                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            else:
+                sub_menu = menu
             module_actions = []
 
             # add the relevant modules
             for module_name in available_modules:
-                module_actions.append((module_name,
-                                       QtWidgets.QAction(
-                                           qicons.add, "Add activity to '{}'".format(module_name), None
-                                       )))
-            if len(other_modules) == 1:
-                module_actions.append((other_modules[0],
-                                       QtWidgets.QAction(
-                                           qicons.add, "Add activity to '{}'".format(other_modules[0]), None
-                                       )))
-            for module_data in module_actions:
-                module_name, module_action = module_data
-                sub_menu.addAction(module_action)
-                module_action.triggered.connect(partial(self.module_context_handler, module_name))
-
-            # add remaining modules
-            if len(other_modules) > 1:
-                sub_sub_menu = sub_menu.addMenu(qicons.right, "More")
-                more_module_actions = []
-                for module_name in other_modules:
-                    more_module_actions.append((module_name,
-                                                QtWidgets.QAction(
-                                                    qicons.add, "Add activity to '{}'".format(module_name), None
-                                                )))
-                for module_data in more_module_actions:
-                    module_name, module_action = module_data
-                    sub_sub_menu.addAction(module_action)
-                    module_action.triggered.connect(partial(self.module_context_handler, module_name))
-        elif (len(available_modules) == 0 and len(other_modules) > 0) or \
-                (len(available_modules) > 0 and len(other_modules) == 0):
-            # EITHER available OR other modules lists is non-empty, get 1 menu
-            menu.addSeparator()
-            _modules = available_modules + other_modules
-            if len(_modules) == 1:
-                sub_menu = menu
-            else:
-                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
-            module_actions = []
-            for module_name in _modules:
                 module_actions.append((module_name,
                                        QtWidgets.QAction(
                                            qicons.add, "Add activity to '{}'".format(module_name), None
@@ -255,7 +220,6 @@ class TechnosphereExchangeTable(BaseExchangeTable):
 
     def generate_module_items(self, key):
         available_modules = set()
-        affected_modules = []
         # get relevant modules
         if msc.related_activities and msc.related_activities.get(key, False):
             modules = msc.related_activities[key]
@@ -263,13 +227,8 @@ class TechnosphereExchangeTable(BaseExchangeTable):
                 # put in any module that this activity is not already part of
                 if key not in msc.affected_activities[module[0]]:
                     available_modules.add(module[0])
-        available_modules = list(available_modules)
-        # get any other modules that the activity is not already part of
-        for module in msc.get_modular_system.get_modules():
-            if key in msc.affected_activities[module.name]:
-                affected_modules.append(module.name)
-        other_modules = [m for m in msc.module_names if m not in available_modules and m not in affected_modules]
-        return available_modules, other_modules
+        available_modules = list(available_modules) + msc.empty_modules
+        return available_modules
 
     def module_context_handler(self, item_name):
         """Decide what happens based on which context menu option was clicked"""
@@ -375,52 +334,17 @@ class DownstreamExchangeTable(BaseExchangeTable):
         menu = QtWidgets.QMenu()
         menu.addAction(qicons.right, "Open activities", self.open_activities)
 
-        available_modules, other_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
-        if len(available_modules) > 0 and len(other_modules) > 0:
+        available_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(available_modules) > 0:
             menu.addSeparator()
-            sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            if len(available_modules) > 1:
+                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            else:
+                sub_menu = menu
             module_actions = []
 
             # add the relevant modules
             for module_name in available_modules:
-                module_actions.append((module_name,
-                                       QtWidgets.QAction(
-                                           qicons.add, "Add activity to '{}'".format(module_name), None
-                                       )))
-            if len(other_modules) == 1:
-                module_actions.append((other_modules[0],
-                                       QtWidgets.QAction(
-                                           qicons.add, "Add activity to '{}'".format(other_modules[0]), None
-                                       )))
-            for module_data in module_actions:
-                module_name, module_action = module_data
-                sub_menu.addAction(module_action)
-                module_action.triggered.connect(partial(self.module_context_handler, module_name))
-
-            # add remaining modules
-            if len(other_modules) > 1:
-                sub_sub_menu = sub_menu.addMenu(qicons.right, "More")
-                more_module_actions = []
-                for module_name in other_modules:
-                    more_module_actions.append((module_name,
-                                                QtWidgets.QAction(
-                                                    qicons.add, "Add activity to '{}'".format(module_name), None
-                                                )))
-                for module_data in more_module_actions:
-                    module_name, module_action = module_data
-                    sub_sub_menu.addAction(module_action)
-                    module_action.triggered.connect(partial(self.module_context_handler, module_name))
-        elif (len(available_modules) == 0 and len(other_modules) > 0) or \
-                (len(available_modules) > 0 and len(other_modules) == 0):
-            # EITHER available OR other modules lists is non-empty, get 1 menu
-            menu.addSeparator()
-            _modules = available_modules + other_modules
-            if len(_modules) == 1:
-                sub_menu = menu
-            else:
-                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
-            module_actions = []
-            for module_name in _modules:
                 module_actions.append((module_name,
                                        QtWidgets.QAction(
                                            qicons.add, "Add activity to '{}'".format(module_name), None
@@ -434,7 +358,6 @@ class DownstreamExchangeTable(BaseExchangeTable):
 
     def generate_module_items(self, key):
         available_modules = set()
-        affected_modules = []
         # get relevant modules
         if msc.related_activities and msc.related_activities.get(key, False):
             modules = msc.related_activities[key]
@@ -442,13 +365,8 @@ class DownstreamExchangeTable(BaseExchangeTable):
                 # put in any module that this activity is not already part of
                 if key not in msc.affected_activities[module[0]]:
                     available_modules.add(module[0])
-        available_modules = list(available_modules)
-        # get any other modules that the activity is not already part of
-        for module in msc.get_modular_system.get_modules():
-            if key in msc.affected_activities[module.name]:
-                affected_modules.append(module.name)
-        other_modules = [m for m in msc.module_names if m not in available_modules and m not in affected_modules]
-        return available_modules, other_modules
+        available_modules = list(available_modules) + msc.empty_modules
+        return available_modules
 
     def module_context_handler(self, item_name):
         """Decide what happens based on which context menu option was clicked"""
