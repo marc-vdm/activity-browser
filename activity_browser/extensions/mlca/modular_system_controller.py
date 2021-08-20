@@ -441,10 +441,13 @@ class ModularSystemController(object):
         self.outputs = outputs
 
     def get_affected_activities(self) -> dict:
-        """Dict of all activities in module, by module."""
+        """Dict of all activities in module, by module.
+
+        An activity is 'affected' by a module if the activity is part of the chain or cuts."""
         aa = {}
         for module in self.get_raw_data:
             activities = set(activity for activity in module['chain'])
+            activities = activities.union(set(cut[0] for cut in module['cuts']))
             aa[module['name']] = list(activities)
         self.affected_activities = aa
         return aa
