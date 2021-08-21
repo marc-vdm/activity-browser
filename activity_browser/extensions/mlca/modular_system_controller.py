@@ -337,11 +337,15 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
-    def add_to_cuts(self, module_key: tuple) -> None:
+    def add_to_cuts(self, input_data: tuple) -> None:
         """Add activity to cut.
 
         module_key is a tuple with (module_name, activity key)"""
-        module_name, key = module_key
+        if len(input_data) == 2:
+            module_name, key = input_data
+            product_name = "Unspecified Input"
+        if len(input_data) == 3:
+            module_name, key, product_name = input_data
 
         module = self.get_modular_system.get_module(module_name)
 
@@ -352,7 +356,7 @@ class ModularSystemController(object):
             if key in children:
                 print("Cannot add cut. Activity is linked to another activity.")
             else:
-                new_cuts = [(key, pcv[1], "Unspecified Input", pcv[2])
+                new_cuts = [(key, pcv[1], product_name, pcv[2])
                             for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]  # pcv = parents, children, value
                 for new_cut in new_cuts:
                    self.get_modular_system.get_module(module_name).cuts.append(new_cut)
@@ -478,16 +482,19 @@ class ModularSystemController(object):
     # retrieve data about the modular system
 
     def get_outputs(self) -> None:
-        """Dict of all output activities in modular system, by key."""
+        """Dict of all output activities in modular system, by key.
+
+        {key: [(module name, output)]}"""
         outputs = {}
         for module in self.get_raw_data:
             _outputs = module['outputs']
             for output in _outputs:
                 key = output[0]
+                _output = (module['name'], output)
                 if outputs.get(key, False):
-                    outputs[key].append(module['name'])
+                    outputs[key].append(_output)
                 else:
-                    outputs[key] = [(module['name'], output)]
+                    outputs[key] = [_output]
         self.outputs = outputs
 
     def get_affected_activities(self) -> dict:

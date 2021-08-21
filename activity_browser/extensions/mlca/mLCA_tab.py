@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtCore, QtWidgets
+from functools import partial
 
 from activity_browser.ui.style import header
 from activity_browser.ui.icons import qicons
+import brightway2 as bw
 
 from activity_browser.signals import signals
 
@@ -267,7 +269,7 @@ class ModuleWidget(QtWidgets.QWidget):
         self.name_layout.addWidget(self.module_color_editor)
         self.name_widget.setLayout(self.name_layout)
 
-        # output widget
+        # output scaling widget
         self.output_scaling_checkbox = QtWidgets.QCheckBox('Output based scaling')
         self.output_scaling_checkbox.setToolTip('Turn output based scaling on or off (default on)')
         self.output_scaling_checkbox.setChecked(True)
@@ -277,9 +279,70 @@ class ModuleWidget(QtWidgets.QWidget):
         self.graph_button.setToolTip('Show the module in the graph view\n'
                                      "To see the modular system in the graph view, click the graph button above the 'Modules' table")
 
+        # available cuts
+        self.available_cuts_widget = QtWidgets.QWidget()
+        self.available_cuts_layout = QtWidgets.QHBoxLayout()
+        self.available_cuts_widget.setLayout(self.available_cuts_layout)
+        self.acww = QtWidgets.QWidget()
+        self.acwc = QtWidgets.QHBoxLayout()
+        self.acwc.addWidget(self.available_cuts_widget)
+        self.acwc.addStretch()
+        self.acww.setLayout(self.acwc)
+
+        #self.construct_available_cuts_base()
+
         self.construct_layout()
         self.connect_signals()
         self.hide()
+
+    def update_available_cuts(self) -> None:
+        layout = self.available_cuts_layout
+        current_active_buttons = {layout.itemAt(i).widget().text(): i for i in range(layout.count())}
+
+        # remove all available cuts buttons
+        remove_widgets = []
+        for ac in current_active_buttons.keys():
+            widget = self.available_cuts_layout.itemAt(current_active_buttons[ac]).widget()
+            remove_widgets.append(widget)
+        for widget in remove_widgets:
+            self.available_cuts_layout.removeWidget(widget)
+            widget.deleteLater()
+
+        # add all available cuts
+        module = msc.get_modular_system.get_module(self.module_name)
+        buttons_added = False
+        for key, _output in msc.outputs.items():
+            if module.external_edges:
+                parents, children, value = zip(*module.external_edges)
+                if key in parents:
+                    for output_module_name, output in _output:
+                        activity = bw.get_activity(key)
+                        button = QtWidgets.QPushButton(qicons.add,
+                                                       "'{}' to\n'{}'".format(output[1], output_module_name))
+                        button.setToolTip("Cut the activity '{}' "
+                                          "with product '{}' to module '{}'".format(activity['name'],
+                                                                                    output[1],
+                                                                                    output_module_name))
+                        button.clicked.connect(partial(self.available_cuts_clicked,
+                                                       (self.module_name, key, output[1])))
+                        self.available_cuts_layout.addWidget(button)
+                        buttons_added = True
+
+        # hide the menu if there are no buttons to show
+        if buttons_added:
+            self.acww.show()
+            self.available_cuts_label.show()
+        else:
+            self.acww.hide()
+            self.available_cuts_label.hide()
+        self.available_cuts_widget.setLayout(self.available_cuts_layout)
+
+    def available_cuts_clicked(self, module_key_prod=None) -> None:
+        module_name, key, product = module_key_prod
+
+        msc.add_to_chain((module_name, key), update=False)
+        msc.update_module(module_name)
+        msc.add_to_cuts(module_key_prod)
 
     def connect_signals(self):
         signals.project_selected.connect(self.reset_widget)
@@ -323,6 +386,15 @@ class ModuleWidget(QtWidgets.QWidget):
                                    'Right click on the activity at the end of the chain to add it as a cut.')
         layout.addWidget(self.cuts_label)
         layout.addWidget(self.cuts_tree)
+
+        self.available_cuts_label = QtWidgets.QLabel('Available cuts:')
+        self.available_cuts_label.setToolTip(
+            'Automatically generate a cut to another module upstream in the supply chain.')
+
+        layout.addWidget(self.available_cuts_label)
+        #layout.addWidget(self.available_cuts_widget)
+        layout.addWidget(self.acww)
+
         self.setLayout(layout)
 
     def reset_widget(self, deleted_module=None):
@@ -349,6 +421,7 @@ class ModuleWidget(QtWidgets.QWidget):
 
     def update_widget(self, module_name=''):
         self.module_name = module_name
+
         self.module_name_field.setText(module_name)
         obs = msc.get_modular_system.get_module(module_name).output_based_scaling
         color = msc.get_modular_system.get_module(module_name).color
@@ -358,5 +431,7 @@ class ModuleWidget(QtWidgets.QWidget):
             self.cuts_label.setText('There are no cuts in this module.')
         else:
             self.cuts_label.setText('Cuts')
+
+        self.update_available_cuts()
 
         self.show()
