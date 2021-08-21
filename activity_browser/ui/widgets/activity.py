@@ -182,7 +182,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
         tag.setStyleSheet(stylesheet)
         tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text()))
         #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
-        #TODO find way to change colors after making module_field
         self.module_field_layout.addWidget(tag)
 
     def assemble_module_field(self):
@@ -217,7 +216,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
         # add new modules if there are any
         for module_name, activities in msc.affected_activities.items():
-            if module_name not in current_active_modules and \
+            if module_name not in current_active_modules.keys() and \
                     self.parent.key in activities:
                 # add module tag if not present already and valid to activity
                 self.generate_module_tag(module_name)
