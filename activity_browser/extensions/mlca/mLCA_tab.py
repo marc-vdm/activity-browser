@@ -121,9 +121,10 @@ class mLCATab(QtWidgets.QWidget):
         if ok and name:
             if name not in msc.module_names:
                 if activity_key:
+                    ref_prod = bw.get_activity(activity_key)["reference product"]
                     msc.add_module(module_name=name,
+                                   outputs=[(activity_key, ref_prod, 1.0)],
                                    chain=[activity_key])
-                    msc.add_to_outputs((name, activity_key))
                 else:
                     msc.add_module(name)
                 mlca_signals.module_selected.emit(name)

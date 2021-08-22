@@ -181,7 +181,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
                      "border: 1px solid black".format(color)
         tag.setStyleSheet(stylesheet)
         tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text()))
-        #tag #TODO add context menu for each module with a 'delete from module' option (perhaps only if the exchange is at the start or end of module)
         self.module_field_layout.addWidget(tag)
 
     def assemble_module_field(self):
@@ -195,7 +194,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
         mf = self.module_field_layout
         current_active_modules = {mf.itemAt(i).widget().text(): i for i in range(1, mf.count())}
 
-        msc.get_modular_system
         # remove all available cuts buttons
         remove_widgets = []
         for module_name in current_active_modules.keys():
