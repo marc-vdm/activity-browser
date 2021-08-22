@@ -308,14 +308,17 @@ class ModuleCutsTree(ABDictTreeView):
     def get_selected_cut(self) -> tuple:
         """ Return the cut of the user-selected index.
         """
-        tree_level = self.tree_level(index=-1)
+        tree_level = self.tree_level(index=self.model.cut_col)
         if tree_level[0] == 'leaf':
             return tree_level[1]
 
-    def tree_level(self, index=-2, indexes=None) -> tuple:
+    def tree_level(self, index=None, indexes=None) -> tuple:
         """Return tuple of (tree level, content)."""
+        if not index:
+            index = self.model.key_col
         if not indexes:
             indexes = self.selectedIndexes()
+
         if indexes[1].data() != '':
             index = self.get_any_index(index)
             return 'leaf', index.data()
@@ -323,12 +326,10 @@ class ModuleCutsTree(ABDictTreeView):
             return 'root', indexes[0].data()
 
     def get_any_index(self, index):
-        # unhide and rehide 'key' column to extract the activity key
-        self.setColumnHidden(self.model.key_col, False)
-        self.setColumnHidden(self.model.cut_col, False)
+        # unhide and rehide 'index' column to extract the activity key
+        self.setColumnHidden(index, False)
         indexes = self.selectedIndexes()
-        self.setColumnHidden(self.model.key_col, True)
-        self.setColumnHidden(self.model.cut_col, True)
+        self.setColumnHidden(index, True)
         return indexes[index]
 
     def custom_view_sizing(self) -> None:
@@ -358,8 +359,7 @@ class ModuleCutsTree(ABDictTreeView):
         mlca_signals.remove_from_cuts.emit((self.model.module_name, self.get_selected_cut, 'cut tree view'))
 
     def update_tree(self):
-        pass
-        if len(self.model.full_cuts) == 0:
+        if self.model.full_cuts[0][0] == 'hide':
             self.hide()
         else:
             self.show()

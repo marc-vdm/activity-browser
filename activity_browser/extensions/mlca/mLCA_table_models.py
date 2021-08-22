@@ -246,10 +246,6 @@ class ModuleCutsModel(BaseTreeModel):
 
     def sync(self, module_name: str) -> None:
         self.module_name = module_name
-        # clear tree
-        self.beginResetModel()
-        self.root.clear()
-        self.endResetModel()
 
         # get data
         for raw_module in msc.get_raw_data:
@@ -257,39 +253,46 @@ class ModuleCutsModel(BaseTreeModel):
                 cuts = raw_module['cuts']
                 break
 
-        # check if there are cuts, if not, skip further actions
+        # check if there are cuts, if not, update to empty tree
         if len(cuts) == 0:
-            self.full_cuts = []
-            self.updated.emit()
-            return
+            # the tree actually needs items on first generation, otherwise it does not update on consecutive updates
+            cut = ('hide', None, '')
+            self.full_cuts = [cut]
+            data = [{header: '' for header in self.HEADERS}]
+            data[0]['cut'] = cut
+        else:
+            output_keys = []
+            full_cuts = set()
+            for cut in cuts:
+                for key in cut[0:-2]:
+                    output_keys.append((key, cut, cut[-1]))  # (key, unique id for every cut, amount)
+                    full_cuts.add(cut)
+            self.full_cuts = list(full_cuts)
 
-        output_keys = []
-        full_cuts = set()
-        for cut in cuts:
-            for key in cut[0:-2]:
-                output_keys.append((key, cut, cut[-1]))  # (key, unique id for every cut, amount)
-                full_cuts.add(cut)
-        self.full_cuts = list(full_cuts)
-
-        data = []
-        for cut_key, cut, amount in output_keys:
-            db = AB_metadata.get_database_metadata(cut_key[0])
-            row = db[db['key'] == cut_key]
-            data.append({
-                "product": row['reference product'].values[0],
-                "amount": amount,
-                "name": row['name'].values[0],
-                "unit": row['unit'].values[0],
-                "location": row['location'].values[0],
-                "database": cut_key[0],
-                "key": cut_key,
-                "cut": cut
-            })
+            data = []
+            for cut_key, cut, amount in output_keys:
+                db = AB_metadata.get_database_metadata(cut_key[0])
+                row = db[db['key'] == cut_key]
+                data.append({
+                    "product": row['reference product'].values[0],
+                    "amount": amount,
+                    "name": row['name'].values[0],
+                    "unit": row['unit'].values[0],
+                    "location": row['location'].values[0],
+                    "database": cut_key[0],
+                    "key": cut_key,
+                    "cut": cut
+                })
 
         # move data to dataframe
         self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.key_col = self._dataframe.columns.get_loc("key")
         self.cut_col = self._dataframe.columns.get_loc("cut")
+
+        # clear old tree
+        self.beginResetModel()
+        self.root.clear()
+        self.endResetModel()
 
         # make tree
         self.setup_model_data()

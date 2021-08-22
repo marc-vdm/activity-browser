@@ -427,7 +427,7 @@ class ModuleWidget(QtWidgets.QWidget):
         color = msc.get_modular_system.get_module(module_name).color
         self.output_scaling_checkbox.setChecked(obs)
         self.module_color_editor.setStyleSheet("background-color: {}".format(color))
-        if len(self.cuts_tree.model.full_cuts) == 0:
+        if self.cuts_tree.model.full_cuts[0][0] == 'hide':
             self.cuts_label.setText('There are no cuts in this module.')
         else:
             self.cuts_label.setText('Cuts')
