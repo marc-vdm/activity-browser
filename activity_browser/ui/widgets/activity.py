@@ -196,29 +196,19 @@ class ActivityDataGrid(QtWidgets.QWidget):
         current_active_modules = {mf.itemAt(i).widget().text(): i for i in range(1, mf.count())}
 
         msc.get_modular_system
+        # remove all available cuts buttons
+        remove_widgets = []
         for module_name in current_active_modules.keys():
             widget = self.module_field_layout.itemAt(current_active_modules[module_name]).widget()
-
-            # remove modules that are removed or do not contain activity anymore
-            if module_name not in msc.module_names or \
-                    self.parent.key not in msc.affected_activities[module_name]:
-                # either module does not exist anymore or activity not in module anymore
-                self.module_field_layout.removeWidget(widget)
-                widget.deleteLater()
-                continue
-
-            # re-write tag-color
-            color = msc.get_modular_system.get_modules([module_name])[0].color
-            stylesheet = "background-color: {};" \
-                         "border-radius: 15px;" \
-                         "border: 1px solid black".format(color)
-            widget.setStyleSheet(stylesheet)
+            remove_widgets.append(widget)
+        for widget in remove_widgets:
+            self.module_field_layout.removeWidget(widget)
+            widget.deleteLater()
 
         # add new modules if there are any
         for module_name, activities in msc.affected_activities.items():
-            if module_name not in current_active_modules.keys() and \
-                    self.parent.key in activities:
-                # add module tag if not present already and valid to activity
+            if self.parent.key in activities:
+                # add module tag if it is valid to activity
                 self.generate_module_tag(module_name)
 
     def module_field_tag_clicked(self, tag_name=None):
