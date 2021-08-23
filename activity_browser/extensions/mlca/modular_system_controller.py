@@ -16,15 +16,16 @@ class ModularSystemController(object):
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
 
+        self.modular_system_path
         self.modular_system = None
         self.raw_data = None
+        self.get_modular_system
+        self.module_names
+
         self.outputs = None
         self.affected_activities = None
         self.related_activities = None
         self.lca_result = None
-
-        self.modular_system_path
-        self.module_names
 
         self.connect_signals()
 
@@ -76,8 +77,6 @@ class ModularSystemController(object):
 
     def import_modules(self, path: str) -> None:
         """Import modules from path."""
-        print('++ import should happen from', path)
-
         modular_system = self.get_modular_system
         modular_system.load_from_file(filepath=path, append=True)
         self.modular_system = modular_system
@@ -106,8 +105,9 @@ class ModularSystemController(object):
         # only load if not loaded already
         if self.modular_system:
             return self.modular_system
-        elif self.raw_data:
+        elif type(self.raw_data) == list:
             self.modular_system = self.get_modular_system_from_raw(self.raw_data)
+            self.get_outputs
             return self.modular_system
         else:
             modular_system = ModularSystem()
@@ -116,6 +116,8 @@ class ModularSystemController(object):
             # update raw data
             self.raw_data = self.modular_system.raw_data
             # metadata is updated through signals in individual functions
+
+            self.get_outputs
             return self.modular_system
 
     @property
@@ -125,7 +127,7 @@ class ModularSystemController(object):
             path = self.modular_system_path
 
         # only load if not loaded already
-        if self.raw_data:
+        if type(self.raw_data) == list:
             return self.raw_data
         else:
             self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
@@ -151,8 +153,8 @@ class ModularSystemController(object):
 
         self.get_raw_data
         if full_system:
-            self.modular_system = self.get_modular_system_from_raw(self.raw_data)
-        self.get_outputs()
+            self.get_modular_system_from_raw(self.raw_data)
+        self.get_outputs
         self.get_affected_activities()
         self.get_related_activities()
 
@@ -176,22 +178,21 @@ class ModularSystemController(object):
         if save:
             # save the updated modular system to disk
             self.save_modular_system()
+            self.get_outputs
             mlca_signals.module_db_changed.emit()
 
     def del_module(self, module_name: str, save=True) -> None:
         """Delete module from modular system."""
-        # get modular system
-        modular_system = self.get_modular_system
-
-        # delete the new module
-        modular_system.remove_module([module_name])
-        self.modular_system = modular_system
-        self.raw_data = modular_system.raw_data
+        # delete the module
+        self.get_modular_system.remove_module([module_name])
+        self.raw_data = self.modular_system.raw_data
 
         if save:
             # save the updated modular system to disk
             self.save_modular_system()
+            self.get_outputs
             mlca_signals.module_db_changed.emit()
+            mlca_signals.module_selected.emit('')
 
     def copy_module(self, module_name: str, copy_name=None, save=True) -> None:
         """Copy module in modular system, default copy name is 'original_COPY'."""
@@ -212,6 +213,7 @@ class ModularSystemController(object):
         for module_name in module_names:
             self.copy_module(module_name, save=False)
         self.save_modular_system()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
 
     # EDITING DATA IN MODULES - FROM ACTIVITY CHANGES
@@ -251,6 +253,7 @@ class ModularSystemController(object):
         for module_name in module_names:
             if key in self.affected_activities.get(module_name, False):
                 self.update_module(module_name)
+                self.get_outputs
                 mlca_signals.module_changed.emit(module_name)
 
     def activity_delete(self, module_names, key):
@@ -285,6 +288,7 @@ class ModularSystemController(object):
         self.get_modular_system.get_module(old_module_name).name = new_module_name
 
         self.update_modular_system()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
 
     def set_module_color(self, module_name: str, color: str) -> None:
@@ -358,11 +362,10 @@ class ModularSystemController(object):
             else:
                 new_cuts = [(key, pcv[1], product_name, pcv[2])
                             for pcv in module.internal_scaled_edges_with_cuts if key == pcv[0]]  # pcv = parents, children, value
-                for new_cut in new_cuts:
-                   self.get_modular_system.get_module(module_name).cuts.append(new_cut)
-                all_cuts = module.cuts
+                self.get_modular_system.get_module(module_name).cuts = module.cuts + new_cuts
+
                 # update the chain
-                new_chain = module.remove_cuts_from_chain(list(module.chain), all_cuts)
+                new_chain = module.remove_cuts_from_chain(list(module.chain), new_cuts)
                 self.get_modular_system.get_module(module_name).chain = new_chain
 
                 self.update_modular_system()
@@ -418,7 +421,7 @@ class ModularSystemController(object):
 
         self.update_modular_system()
         self.update_module(module_name)
-        self.get_outputs()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
@@ -436,7 +439,7 @@ class ModularSystemController(object):
         if update:
             self.update_modular_system()
             self.update_module(module_name)
-            self.get_outputs()
+            self.get_outputs
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
@@ -456,7 +459,7 @@ class ModularSystemController(object):
 
         self.update_modular_system()
         self.update_module(module_name)
-        self.get_outputs()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
@@ -474,16 +477,18 @@ class ModularSystemController(object):
 
         self.update_modular_system()
         self.update_module(module_name)
-        self.get_outputs()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
         mlca_signals.module_changed.emit(module_name)
 
     # RETRIEVING DATA
     # retrieve data about the modular system
 
+    @property
     def get_outputs(self) -> None:
         """Dict of all output activities in modular system, by key.
 
+        Intended to be called after changes to module outputs or the modular system (adding/removing modules)
         {key: [(module name, output)]}"""
         outputs = {}
         for module in self.get_raw_data:
@@ -515,7 +520,7 @@ class ModularSystemController(object):
         Each activity that is an input to a part of the module or downstream from an output is in this dict."""
         keys = {}
         _keys = {}
-        for module in self.modular_system.get_modules():
+        for module in self.get_modular_system.get_modules():
             # check for upstream processes
             for act_key in module.chain:
                 activity = bw.get_activity(act_key)

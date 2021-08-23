@@ -106,6 +106,9 @@ class ModuleOutputsModel(GenericEditableDragModuleModel):
         return True
 
     def sync(self, module_name: str) -> None:
+        if module_name == '':
+            self.updated.emit()
+            return
         self.module_name = module_name
         for raw_module in msc.get_raw_data:
             if raw_module['name'] == module_name:
@@ -154,6 +157,9 @@ class ModuleChainModel(GenericModuleModel):
         self.connect_signals()
 
     def sync(self, module_name: str) -> None:
+        if module_name == '':
+            self.updated.emit()
+            return
         self.module_name = module_name
         self.module = msc.get_modular_system.get_module(module_name)
         for raw_module in msc.get_raw_data:
@@ -210,14 +216,12 @@ class ModuleCutsModel(BaseTreeModel):
         return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value, role=Qt.EditRole):
-        """Whenever data is changed, call an update to the relevant exchange
-                or activity.
-                """
+        """Whenever data is changed, call an update to the cut name."""
         # go to the first child of the root(cut name), and get product/name/location/amt and filter DF to get cut
         cut = self._dataframe[(self._dataframe["product"] == index.child(0, 0).data()) &
-                              (self._dataframe["name"] == index.child(0, 1).data()) &
-                              (self._dataframe["location"] == index.child(0, 2).data()) &
-                              (self._dataframe["amount"] == index.child(0, 3).data())]['cut'].to_list()[0]
+                              (self._dataframe["amount"] == index.child(0, 1).data()) &
+                              (self._dataframe["name"] == index.child(0, 2).data()) &
+                              (self._dataframe["location"] == index.child(0, 4).data())]['cut'].to_list()[0]
         mlca_signals.alter_cut.emit((self.module_name, cut, value))
         return True
 
@@ -245,13 +249,16 @@ class ModuleCutsModel(BaseTreeModel):
                 ModuleCutsItem.build_item(row.to_list(), prod_branch)
 
     def sync(self, module_name: str) -> None:
-        self.module_name = module_name
+        if module_name == '':
+            cuts = []
+        else:
+            self.module_name = module_name
 
-        # get data
-        for raw_module in msc.get_raw_data:
-            if raw_module['name'] == module_name:
-                cuts = raw_module['cuts']
-                break
+            # get data
+            for raw_module in msc.get_raw_data:
+                if raw_module['name'] == module_name:
+                    cuts = raw_module['cuts']
+                    break
 
         # check if there are cuts, if not, update to empty tree
         if len(cuts) == 0:
