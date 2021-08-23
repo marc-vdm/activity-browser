@@ -53,6 +53,7 @@ class ModularSystemController(object):
         signals.exchanges_deleted.connect(self.db_exchange_deleted)
         signals.activity_modified.connect(self.db_activity_modified)
         signals.activity_deleted.connect(self.db_activity_deleted)
+        signals.delete_database_confirmed.connect(self.db_deleted)
 
     def project_change(self) -> None:
         """Get projects new modular system location, resets class data."""
@@ -248,7 +249,14 @@ class ModularSystemController(object):
                     check_modules.add(module_name)
             self.activity_delete(list(check_modules), key_in)
 
-    def activity_modify(self, module_names, key):
+    def db_deleted(self, db_name: str) -> None:
+        """Remove references to the deleted database in modules."""
+        for module_name, activities in self.affected_activities.items():
+            for key in activities:
+                if key[0] == db_name:
+                    self.activity_delete([module_name], key)
+
+    def activity_modify(self, module_names: list, key: tuple) -> None:
         """Determine if the changed activity requires changes to the modular system, and perform them."""
         for module_name in module_names:
             if key in self.affected_activities.get(module_name, False):
@@ -256,7 +264,7 @@ class ModularSystemController(object):
                 self.get_outputs
                 mlca_signals.module_changed.emit(module_name)
 
-    def activity_delete(self, module_names, key):
+    def activity_delete(self, module_names: list, key: tuple) -> None:
         """Determine if the deleted activity requires changes to the modular system, and perform them."""
         for module_name in module_names:
             if key in self.affected_activities.get(module_name, False):
