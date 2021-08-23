@@ -152,10 +152,9 @@ class mLCATab(QtWidgets.QWidget):
             ("Are you sure you want to delete MULTIPLE modules? This action cannot be undone")
         )
         if ok == QtWidgets.QMessageBox.Yes:
-            for module_name in module_names:
+            for module_name in module_names[:-1]:
                 msc.del_module(module_name, save=False)
-            msc.save_modular_system()
-            mlca_signals.module_db_changed.emit()
+            msc.del_module(module_names[-1])
 
     def rename_module_dialog(self, module_name):
         """Dialog to rename a module in the modular system"""
@@ -290,13 +289,67 @@ class ModuleWidget(QtWidgets.QWidget):
         self.acwc.addStretch()
         self.acww.setLayout(self.acwc)
 
-        #self.construct_available_cuts_base()
-
         self.construct_layout()
         self.connect_signals()
         self.hide()
 
+    def connect_signals(self):
+        signals.project_selected.connect(self.reset_widget)
+        mlca_signals.del_module.connect(self.reset_widget)
+        mlca_signals.rename_module.connect(self.reset_widget)
+        mlca_signals.module_selected.connect(self.update_widget)
+        mlca_signals.module_color_set.connect(self.update_widget)
+        mlca_signals.module_changed.connect(self.update_widget)
+        mlca_signals.module_db_changed.connect(self.update_available_cuts)
+        self.module_name_field.editingFinished.connect(self.module_name_change)
+        self.module_color_editor.clicked.connect(self.change_module_color)
+        self.output_scaling_checkbox.toggled.connect(self.output_based_scaling_editor)
+        self.graph_button.clicked.connect(self.show_module_in_graph)
+
+    def construct_layout(self):
+        # Overall Layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.addWidget(self.name_widget)
+
+        tools_layout = QtWidgets.QHBoxLayout()
+        tools_layout.addWidget(self.output_scaling_checkbox)
+        tools_layout.addStretch()
+        tools_layout.addWidget(self.graph_button)
+        tools_widget = QtWidgets.QWidget()
+        tools_widget.setLayout(tools_layout)
+        layout.addWidget(tools_widget)
+
+        self.outputs_label = QtWidgets.QLabel('Outputs')
+        self.outputs_label.setToolTip('An output is the product that a module produces. Outputs are required for modular calculations.\n'
+                                      'Right click on an activity in the chain to add it as an output.')
+        layout.addWidget(self.outputs_label)
+        layout.addWidget(self.outputs_table)
+        self.chain_label = QtWidgets.QLabel('Chain')
+        self.chain_label.setToolTip('The chain is the supply chain required to produce an output.\n'
+                                    'A chain must be at least one activity long, but can be longer to connect to different modules with cuts.')
+        layout.addWidget(self.chain_label)
+        layout.addWidget(self.chain_table)
+        self.cuts_label = QtWidgets.QLabel('Cuts')
+        self.cuts_label.setToolTip('A cut is where a module replaces the conventional\n'
+                                   'activity input with another module as input. Cuts are optional.\n'
+                                   'Right click on the activity at the end of the chain to add it as a cut.')
+        layout.addWidget(self.cuts_label)
+        layout.addWidget(self.cuts_tree)
+
+        self.available_cuts_label = QtWidgets.QLabel('Available cuts:')
+        self.available_cuts_label.setToolTip(
+            'Automatically generate a cut to another module upstream in the supply chain.')
+
+        layout.addWidget(self.available_cuts_label)
+        layout.addWidget(self.acww)
+
+        self.setLayout(layout)
+
     def update_available_cuts(self) -> None:
+        if not self.module_name:
+            return
+
         layout = self.available_cuts_layout
         current_active_buttons = {layout.itemAt(i).widget().text(): i for i in range(layout.count())}
 
@@ -345,59 +398,6 @@ class ModuleWidget(QtWidgets.QWidget):
         msc.update_module(module_name)
         msc.add_to_cuts(module_key_prod)
 
-    def connect_signals(self):
-        signals.project_selected.connect(self.reset_widget)
-        mlca_signals.del_module.connect(self.reset_widget)
-        mlca_signals.rename_module.connect(self.reset_widget)
-        mlca_signals.module_selected.connect(self.update_widget)
-        mlca_signals.module_color_set.connect(self.update_widget)
-        mlca_signals.module_changed.connect(self.update_widget)
-        self.module_name_field.editingFinished.connect(self.module_name_change)
-        self.module_color_editor.clicked.connect(self.change_module_color)
-        self.output_scaling_checkbox.toggled.connect(self.output_based_scaling_editor)
-        self.graph_button.clicked.connect(self.show_module_in_graph)
-
-    def construct_layout(self):
-        # Overall Layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignTop)
-        layout.addWidget(self.name_widget)
-
-        tools_layout = QtWidgets.QHBoxLayout()
-        tools_layout.addWidget(self.output_scaling_checkbox)
-        tools_layout.addStretch()
-        tools_layout.addWidget(self.graph_button)
-        tools_widget = QtWidgets.QWidget()
-        tools_widget.setLayout(tools_layout)
-        layout.addWidget(tools_widget)
-
-        self.outputs_label = QtWidgets.QLabel('Outputs')
-        self.outputs_label.setToolTip('An output is the product that a module produces. Outputs are required for modular calculations.\n'
-                                      'Right click on an activity in the chain to add it as an output.')
-        layout.addWidget(self.outputs_label)
-        layout.addWidget(self.outputs_table)
-        self.chain_label = QtWidgets.QLabel('Chain')
-        self.chain_label.setToolTip('The chain is the supply chain required to produce an output.\n'
-                                    'A chain must be at least one activity long, but can be longer to connect to different modules with cuts.')
-        layout.addWidget(self.chain_label)
-        layout.addWidget(self.chain_table)
-        self.cuts_label = QtWidgets.QLabel('Cuts')
-        self.cuts_label.setToolTip('A cut is where a module replaces the conventional\n'
-                                   'activity input with another module as input. Cuts are optional.\n'
-                                   'Right click on the activity at the end of the chain to add it as a cut.')
-        layout.addWidget(self.cuts_label)
-        layout.addWidget(self.cuts_tree)
-
-        self.available_cuts_label = QtWidgets.QLabel('Available cuts:')
-        self.available_cuts_label.setToolTip(
-            'Automatically generate a cut to another module upstream in the supply chain.')
-
-        layout.addWidget(self.available_cuts_label)
-        #layout.addWidget(self.available_cuts_widget)
-        layout.addWidget(self.acww)
-
-        self.setLayout(layout)
-
     def reset_widget(self, deleted_module=None):
         if deleted_module == self.module_name or not deleted_module:
             self.hide()
@@ -421,6 +421,10 @@ class ModuleWidget(QtWidgets.QWidget):
         print('++ Graph view should be opened')
 
     def update_widget(self, module_name=''):
+        if module_name == '':
+            self.hide()
+            return
+
         self.module_name = module_name
 
         self.module_name_field.setText(module_name)

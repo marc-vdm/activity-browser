@@ -327,9 +327,11 @@ class ModuleCutsTree(ABDictTreeView):
 
     def get_any_index(self, index):
         # unhide and rehide 'index' column to extract the activity key
-        self.setColumnHidden(index, False)
+        self.setColumnHidden(self.model.key_col, False)
+        self.setColumnHidden(self.model.cut_col, False)
         indexes = self.selectedIndexes()
-        self.setColumnHidden(index, True)
+        self.setColumnHidden(self.model.key_col, True)
+        self.setColumnHidden(self.model.cut_col, True)
         return indexes[index]
 
     def custom_view_sizing(self) -> None:

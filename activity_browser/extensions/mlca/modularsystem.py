@@ -64,7 +64,7 @@ class ModularSystem(object):
             if product in module_names:
                 raise ValueError(u'Product and Module names cannot be identical.')
         self.module_list = module_list
-        self.map_name_module = dict([(module.name, module) for module in self.module_list])
+        self.map_name_module = {module.name: module for module in self.module_list}
         self.map_module_number = dict(zip(self.modules, itertools.count()))
         self.map_products_number = dict(zip(self.products, itertools.count()))
         self.map_number_module = {v: k for k, v in self.map_module_number.items()}
