@@ -1,64 +1,85 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
+from peewee import DoesNotExist
 from bw2data.utils import recursive_str_to_unicode
-from activity_browser.bwutils import AB_metadata
 import itertools
 import numpy as np
 import uuid
 
 
 class Module(object):
-    """A description of one or several processes from a life cycle inventory database.
+    """A description of one or several modules from a life cycle inventory database.
      It has the following characteristics:
 
     * It produces one or several output products
-    * It has at least one process from an inventory database
+    * It has at least one module from an inventory database
     * It has one or several scaling activities that are linked to the output of the system. They are calculated automatically based on the product output (exception: if output_based_scaling=False, see below).
-    * Inputs may be cut-off. Cut-offs are remembered and can be used in a linked meta-process to recombine meta-processes to form supply chains (or several, alternative supply chains).
+    * Inputs may be cut-off. Cut-offs are remembered and can be used in a linked module to recombine modules to form supply chains (or several, alternative supply chains).
 
     Args:
-        * *name* (``str``): Name of the meta-process
-        * *outputs* (``[(key, str, optional float)]``): A list of products produced by the meta-process. Format is ``(key into inventory database, product name, optional amount of product produced)``.
-        * *chain* (``[key]``): A list of inventory processes in the supply chain (not necessarily in order).
-        * *cuts* (``[(parent_key, child_key, str, float)]``): A set of linkages in the supply chain that should be cut. These will appear as **negative** products (i.e. inputs) in the process-product table. The float amount is determined automatically. Format is (input key, output key, product name, amount).
-        * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory processes.
+        * *name* (``str``): Name of the module
+        * *outputs* (``[(key, str, optional float)]``): A list of products produced by the module. Format is ``(key into inventory database, product name, optional amount of product produced)``.
+        * *chain* (``[key]``): A list of inventory modules in the supply chain (not necessarily in order).
+        * *cuts* (``[(parent_key, child_key, str, float)]``): A set of linkages in the supply chain that should be cut. These will appear as **negative** products (i.e. inputs) in the module-product table. The float amount is determined automatically. Format is (input key, output key, product name, amount).
+        * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory modules.
 
     """
-    # TODO: introduce UUID for meta-processes?
+    # TODO: introduce UUID for modules?
 
-    # INTERNAL METHODS FOR CONSTRUCTING META-PROCESSES
+    # INTERNAL METHODS FOR CONSTRUCTING MODULES
 
-    def __init__(self, name, outputs, chain, cuts, output_based_scaling=True, **kwargs):
-        self.key = None  # created when MP saved to a DB
+    def __init__(self, name: str, outputs: list,
+                 chain: list, cuts: list,
+                 output_based_scaling=True, color='white', **kwargs) -> None:
+        self.key = None  # created when module saved to a DB
         self.name = name
         self.cuts = cuts
         self.output_based_scaling = output_based_scaling
         self.chain = self.remove_cuts_from_chain(chain, self.cuts)
-        self.depending_databases = list(set(c[0] for c in self.chain))
-        self.filtered_database = self.getFilteredDatabase(self.depending_databases, self.chain)
+        self.filtered_database = self.getFilteredDatabase(self.chain)
         self.edges = self.construct_graph(self.filtered_database)
         self.scaling_activities, self.isSimple = self.getScalingActivities(self.chain, self.edges)
         self.outputs = self.pad_outputs(outputs)
         self.mapping, self.demand, self.matrix, self.supply_vector = \
             self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
-        self.get_edge_lists()
-        self.pad_cuts()
+        self.get_edge_lists
+        self.pad_cuts
+        self.color = color
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
+        self.output_keys = [o[0] for o in self.outputs]
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
 
-    def remove_cuts_from_chain(self, chain, cuts):
+    @property
+    def update_module(self) -> None:
+        """Update the module if changes were written to data like cuts, chain or outputs."""
+        self.chain = self.remove_cuts_from_chain(list(self.chain), self.cuts)
+        self.filtered_database = self.getFilteredDatabase(self.chain)
+        self.edges = self.construct_graph(self.filtered_database)
+        self.scaling_activities, self.isSimple = self.getScalingActivities(self.chain, self.edges)
+        self.outputs = self.pad_outputs(self.outputs)
+        self.mapping, self.demand, self.matrix, self.supply_vector = \
+            self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
+        self.get_edge_lists
+        self.pad_cuts
+
+        self.output_names = [o[1] for o in self.outputs]
+        self.output_keys = [o[0] for o in self.outputs]
+        self.cut_names = [c[2] for c in self.cuts]
+        self.is_multi_output = len(self.outputs) > 1
+
+    def remove_cuts_from_chain(self, chain: list, cuts: list) -> set:
         """Remove chain items if they are the parent of a cut. Otherwise this leads to unintended LCIA results."""
         for cut in cuts:
             if cut[0] in chain:
                 chain.remove(cut[0])
-                print("MP WARNING: Cut removed from chain: " + str(cut[0]))
+                print("MODULE WARNING: Cut removed from chain: " + str(cut[0]))
 
         return set(chain)
 
-    def getFilteredDatabase(self, depending_databases, chain):
-        """Extract the supply chain for this process from larger database.
+    def getFilteredDatabase(self, chain: set) -> dict:
+        """Extract the supply chain for this module from larger database.
 
         Args:
             * *nodes* (set): The datasets to extract (keys in db dict)
@@ -68,15 +89,18 @@ class Module(object):
             A filtered database, in the same dict format
 
         """
-        output = {}
-        for name in depending_databases:
-            db = AB_metadata.get_database_metadata(name)
-            output.update(
-                dict([(k, v) for k, v in db.items() if k in chain])
-            )
-        return output
+        chain_exc = {}
+        for act_key in chain:
+            try:
+                activity = bw.get_activity(act_key)
+            except DoesNotExist:
+                print('activity does not exist in Brightway:', act_key)
+                return
 
-    def construct_graph(self, db):
+            chain_exc[act_key] = {'exchanges': [e for e in activity.technosphere()]}
+        return chain_exc
+
+    def construct_graph(self, db: dict) -> list:
         """Construct a list of edges (excluding self links, e.g. an electricity input to electricity production).
 
         Args:
@@ -89,13 +113,13 @@ class Module(object):
         return list(itertools.chain(*[[(tuple(e["input"]), k, e["amount"])
                     for e in v["exchanges"] if e["type"] != "production" and e["input"] != k] for k, v in db.items()]))
 
-    def getScalingActivities(self, chain, edges):
+    def getScalingActivities(self, chain: set, edges: list) -> list:
         """Which are the scaling activities (at least one)?
 
-        Calculate by filtering for processes which are not used as inputs.
+        Calculate by filtering for modules which are not used as inputs.
 
         Args:
-            * *chain* (set): The supply chain processes
+            * *chain* (set): The supply chain modules
             * *edges* (list): The list of supply chain edges
 
         Returns:
@@ -107,7 +131,7 @@ class Module(object):
         isSimple = len(heads) == 1
         return list(heads), isSimple
 
-    def pad_outputs(self, outputs):
+    def pad_outputs(self, outputs: list) -> list:
         """If not given, adds default values to outputs:
 
         * output name: "Unspecified Output"
@@ -136,16 +160,17 @@ class Module(object):
         # add outputs that were not specified
         for sa in self.scaling_activities:
             if sa not in [o[0] for o in outputs]:
-                print("MP: Adding an output that was not specified: " + str(sa))
+                print("MODULE: Adding an output that was not specified: " + str(sa))
                 padded_outputs.append((sa, "Unspecified Output", 1.0))
         # remove outputs that were specified, but are *not* outputs
         for o in outputs:
             if o[0] not in self.scaling_activities:
-                print("MP: Removing a specified output that is *not* actually an output: " + str(o[0]))
+                print("MODULE: Removing a specified output that is *not* actually an output: " + str(o[0]))
                 padded_outputs.remove(o)
         return padded_outputs
 
-    def get_supply_vector(self, chain, edges, scaling_activities, outputs):
+    def get_supply_vector(self, chain: set, edges: list,
+                          scaling_activities: list, outputs: list) -> tuple:
         """Construct supply vector (solve linear system) for the supply chain of this simplified product system.
 
         Args:
@@ -154,14 +179,14 @@ class Module(object):
             * *scaling_activities* (key): Scaling activities
 
         Returns:
-            Mapping from process keys to supply vector indices
+            Mapping from module keys to supply vector indices
             Supply vector (as list)
 
         """
         mapping = dict(*[zip(sorted(chain), itertools.count())])
         reverse_mapping = dict(*[zip(itertools.count(), sorted(chain))])
 
-        # MATRIX (that relates to processes in the chain)
+        # MATRIX (that relates to modules in the chain)
         # Diagonal values (usually 1, but there are exceptions)
         M = len(chain)
         matrix = np.zeros((M, M))
@@ -200,8 +225,9 @@ class Module(object):
                     demand[mapping[sa]] += o[2]
         return mapping, demand, matrix, np.linalg.solve(matrix, demand).tolist()
 
-    def get_edge_lists(self):
-        """Get lists of external and internal edges with original flow values or scaled to the meta-process."""
+    @property
+    def get_edge_lists(self) -> None:
+        """Get lists of external and internal edges with original flow values or scaled to the module."""
         self.external_edges = \
             [x for x in self.edges if (x[0] not in self.chain and x[:2] not in set([y[:2] for y in self.cuts]))]
         self.internal_edges = \
@@ -216,7 +242,8 @@ class Module(object):
         self.internal_scaled_edges_with_cuts = \
             [(x[0], x[1], x[2] * self.supply_vector[self.mapping[x[1]]]) for x in self.internal_edges_with_cuts]
 
-    def pad_cuts(self):
+    @property
+    def pad_cuts(self) -> None:
         """Makes sure that each cut includes the amount that is cut. This is retrieved from self.internal_scaled_edges_with_cuts."""
         for i, c in enumerate(self.cuts):
             for e in self.internal_scaled_edges_with_cuts:
@@ -226,32 +253,33 @@ class Module(object):
                     except IndexError:
                         print("Problem with cut data: " + str(c))
 
-    # METHODS THAT RETURN META-PROCESS DATA
+    # METHODS THAT RETURN MODULE DATA
 
     @property
-    def mp_data(self):
-        """Returns a dictionary of meta-process data as specified in the data format."""
-        mp_data_dict = {
+    def module_data(self) -> dict:
+        """Returns a dictionary of module data as specified in the data format."""
+        module_data_dict = {
             'name': self.name,
             'outputs': self.outputs,
             'chain': list(self.chain),
             'cuts': self.cuts,
             'output_based_scaling': self.output_based_scaling,
+            'color': self.color,
         }
-        return mp_data_dict
+        return module_data_dict
 
-    def get_product_inputs_and_outputs(self):
+    def get_product_inputs_and_outputs(self) -> list:
         """Returns a list of product inputs and outputs."""
         return [(cut[2], -cut[3]) for cut in self.cuts] + [(output[1], output[2]) for output in self.outputs]
 
     @property
-    def pp(self):
-        """Property shortcut for returning a list of product intputs and outputs."""
+    def pp(self) -> list:
+        """Property shortcut for returning a list of product inputs and outputs."""
         return self.get_product_inputs_and_outputs()
 
     # LCA
 
-    def get_background_lci_demand(self, foreground_amount):
+    def get_background_lci_demand(self, foreground_amount: float) -> dict:
         demand = {}  # dictionary for the brightway2 LCA object {activity key: amount}
         for sa in self.scaling_activities:
             demand.update({sa: self.demand[self.mapping[sa]]*foreground_amount})
@@ -259,12 +287,12 @@ class Module(object):
             demand.update({cut[0]: -cut[3]*foreground_amount})
         return demand
 
-    def lca(self, method, amount=1.0, factorize=False):
+    def lca(self, method: tuple, amount=1.0, factorize=False) -> float:
         """Calculates LCA results for a given LCIA method and amount. Returns the LCA score."""
         if not self.scaling_activities:
             raise ValueError("No scaling activity")
         if hasattr(self, "calculated_lca"):
-            self.calculated_lca.method = method
+            self.calculated_lca.switch_method(method)
             self.calculated_lca.lcia()
         else:
             demand = self.get_background_lci_demand(amount)
@@ -275,7 +303,7 @@ class Module(object):
             self.calculated_lca.lcia()
         return self.calculated_lca.score
 
-    def lci(self, amount=1.0):
+    def lci(self, amount=1.0) -> bw.LCA.lci:
         if not self.scaling_activities:
             raise ValueError("No scaling activity")
         demand = self.get_background_lci_demand(amount)
@@ -284,9 +312,9 @@ class Module(object):
 
     # SAVE AS REGULAR ACTIVITY
 
-    def save_as_bw2_dataset(self, db_name="MP default", unit=None,
-            location=None, categories=[], save_aggregated_inventory=False):
-        """Save simplified process to a database.
+    def save_as_bw2_dataset(self, db_name="MODULE default", unit=None,
+            location=None, categories=[], save_aggregated_inventory=False) -> None:
+        """Save simplified module to a database.
 
         Creates database if necessary; otherwise *adds* to existing database. Uses the ``unit`` and ``location`` of ``self.scaling_activities[0]``, if not otherwise provided. Assumes that one unit of the scaling activity is being produced.
 
@@ -295,7 +323,7 @@ class Module(object):
             * *unit* (str, optional): Unit of the simplified process
             * *location* (str, optional): Location of the simplified process
             * *categories* (list, optional): Category/ies of the scaling activity
-            * *save_aggregated_inventory* (bool, optional): Saves in output minus input style by default (True), otherwise aggregated inventory of all inventories linked within the meta-process
+            * *save_aggregated_inventory* (bool, optional): Saves in output minus input style by default (True), otherwise aggregated inventory of all inventories linked within the module
 
         """
         db = bw.Database(db_name)
@@ -333,7 +361,7 @@ class Module(object):
                     "input": cut[0],
                     "type": "biosphere" if cut[0] in (u"biosphere", u"biosphere3") else "technosphere",
                 })
-        else:  # save aggregated inventory of all processes in chain
+        else:  # save aggregated inventory of all modules in chain
             exchanges = [{
                 "amount": exc[2],
                 "input": exc[0],
@@ -357,7 +385,7 @@ class Module(object):
         }
 
         # TODO: Include uncertainty from original databases. Can't just scale
-        # uncertainty parameters. Maybe solution is to use "dummy" processes
+        # uncertainty parameters. Maybe solution is to use "dummy" modules
         # like we want to do to separate inputs of same flow in any case.
         # data = db.relabel_data(data, db_name)
         db.write(recursive_str_to_unicode(data))

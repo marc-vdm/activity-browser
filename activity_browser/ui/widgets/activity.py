@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 from PySide2 import QtCore, QtWidgets
 from PySide2.QtWidgets import QMessageBox
+
+from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
+from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
 from .line_edit import SignalledLineEdit, SignalledComboEdit
 from ..icons import qicons
@@ -81,6 +86,27 @@ class ActivityDataGrid(QtWidgets.QWidget):
             lambda target_db: self.duplicate_confirm_dialog(target_db))
         self.database_combo.setToolTip("Use dropdown menu to duplicate activity to another database")
 
+        # module label
+        self.module_label = QtWidgets.QLabel('Modules')
+
+        # module field
+        self.module_field = QtWidgets.QWidget()
+        self.module_field_layout = QtWidgets.QHBoxLayout()
+        self.assemble_module_field()
+        self.module_field.setLayout(self.module_field_layout)
+        self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
+
+        # module combobox
+        # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new or existing module
+        self.module_combo_field = QtWidgets.QWidget()
+        self.module_combo_field_layout = QtWidgets.QHBoxLayout()
+        self.module_combo_field_layout.addWidget(QtWidgets.QLabel('Add to module:'))
+        self.module_combo = QtWidgets.QComboBox()
+        self.module_combo_field_layout.addWidget(self.module_combo)
+        self.module_combo_field.setLayout(self.module_combo_field_layout)
+        self.populate_module_combo()
+        self.module_combo.setToolTip("Add this activity to a new or existing module")
+
         # arrange widgets for display as a grid
         self.grid = QtWidgets.QGridLayout()
 
@@ -95,6 +121,10 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.grid.addWidget(self.location_combo, 2, 2, 1, -1)
         self.grid.addWidget(self.database_combo, 3, 2, 1, -1)
         self.grid.addWidget(self.database_label, 3, 1)
+        self.grid.addWidget(self.module_label, 4, 1)
+        self.grid.addWidget(self.module_field, 4, 2)
+        self.grid.addWidget(self.module_combo_field, 4, 3)
+
 
         self.setLayout(self.grid)
 
@@ -106,6 +136,82 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
     def connect_signals(self):
         signals.edit_activity.connect(self.update_location_combo)
+        mlca_signals.module_db_changed.connect(self.update_module_field)
+        mlca_signals.module_db_changed.connect(self.populate_module_combo)
+        mlca_signals.module_color_set.connect(self.update_module_field)
+        self.module_combo.activated.connect(self.module_combo_option_selected)
+
+    def populate_module_combo(self):
+        self.module_combo.clear()
+        items = []
+        if msc.related_activities and msc.related_activities.get(self.parent.key, False):
+            modules = msc.related_activities[self.parent.key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if self.parent.key not in msc.affected_activities[module[0]] and module[0] not in items:
+                    items.append(module[0])
+        items = ['', 'Add to new Module'] + items
+        self.module_combo.addItems(items)
+
+    def module_combo_option_selected(self):
+        option = self.module_combo.currentText()
+        if option == '':
+            return
+        elif option == 'Add to new Module':
+            mlca_signals.new_module_from_act.emit(self.parent.key)
+            signals.show_tab.emit("Modular System")
+        else:
+            modules = msc.related_activities[self.parent.key]
+            for module in modules:
+                if module[0] == option:
+                    break
+            if module[1] == 'output':
+                mlca_signals.replace_output.emit((module[0], self.parent.key))
+            elif module[1] == 'chain':
+                mlca_signals.add_to_chain.emit((module[0], self.parent.key))
+            signals.show_tab.emit("Modular System")
+
+        self.module_combo.setCurrentIndex(0)
+
+    def generate_module_tag(self, module_name):
+        tag = QtWidgets.QPushButton(module_name, self)
+        color = msc.get_modular_system.get_modules([module_name])[0].color
+        stylesheet = "background-color: {};" \
+                     "border-radius: 15px;" \
+                     "border: 1px solid black".format(color)
+        tag.setStyleSheet(stylesheet)
+        tag.clicked.connect(partial(self.module_field_tag_clicked, tag.text()))
+        self.module_field_layout.addWidget(tag)
+
+    def assemble_module_field(self):
+        self.module_field_layout.addWidget(QtWidgets.QLabel('Included in:'))
+        msc.get_modular_system
+        for module_name, activities in msc.affected_activities.items():
+            if self.parent.key in activities:
+                self.generate_module_tag(module_name)
+
+    def update_module_field(self):
+        mf = self.module_field_layout
+        current_active_modules = {mf.itemAt(i).widget().text(): i for i in range(1, mf.count())}
+
+        # remove all available cuts buttons
+        remove_widgets = []
+        for module_name in current_active_modules.keys():
+            widget = self.module_field_layout.itemAt(current_active_modules[module_name]).widget()
+            remove_widgets.append(widget)
+        for widget in remove_widgets:
+            self.module_field_layout.removeWidget(widget)
+            widget.deleteLater()
+
+        # add new modules if there are any
+        for module_name, activities in msc.affected_activities.items():
+            if self.parent.key in activities:
+                # add module tag if it is valid to activity
+                self.generate_module_tag(module_name)
+
+    def module_field_tag_clicked(self, tag_name=None):
+        mlca_signals.module_selected.emit(tag_name)
+        signals.show_tab.emit("Modular System")
 
     def populate(self):
         # fill in the values of the ActivityDataGrid widgets
@@ -185,3 +291,9 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.read_only = read_only
         self.name_box.setReadOnly(self.read_only)
         self.location_combo.setEnabled(not self.read_only)
+
+    def hide_show_module_data(self, toggled=False):
+        self.module_label.setVisible(toggled)
+        self.module_combo_field.setVisible(toggled)
+        self.module_field.setVisible(toggled)
+

@@ -16,6 +16,7 @@ from ...ui.style import horizontal_line, header, style_group_box
 from ...ui.tables import (
     CSActivityTable, CSList, CSMethodsTable, PresamplesList, ScenarioImportTable
 )
+
 from ...ui.widgets import ExcelReadDialog
 from .base import BaseRightTab
 
@@ -108,7 +109,9 @@ class LCASetupTab(QtWidgets.QWidget):
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.calculation_type = QtWidgets.QComboBox()
         self.calculation_type.addItems(["Standard LCA", "Scenario LCA", "Presamples LCA"])
+        # default
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
+        # presamples
         self.presamples = PresamplesTuple(
             QtWidgets.QLabel("Prepared scenarios:"),
             PresamplesList(self),
@@ -117,6 +120,7 @@ class LCASetupTab(QtWidgets.QWidget):
         )
         for obj in self.presamples:
             obj.hide()
+        # scenarios
         self.scenario_calc_btn = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.scenario_calc_btn.hide()
 
@@ -133,6 +137,7 @@ class LCASetupTab(QtWidgets.QWidget):
         calc_row.addWidget(self.calculate_button)
         calc_row.addWidget(self.presamples.button)
         calc_row.addWidget(self.scenario_calc_btn)
+
         calc_row.addWidget(self.calculation_type)
         calc_row.addWidget(self.presamples.label)
         calc_row.addWidget(self.presamples.list)
@@ -144,7 +149,8 @@ class LCASetupTab(QtWidgets.QWidget):
         container.addLayout(calc_row)
         container.addWidget(horizontal_line())
 
-        cs_panel_layout.addWidget(header('Reference flows:'))
+        self.reference_flow_header = header('Reference flows:')
+        cs_panel_layout.addWidget(self.reference_flow_header)
         cs_panel_layout.addWidget(self.activities_table)
         cs_panel_layout.addWidget(header('Impact categories:'))
         cs_panel_layout.addWidget(self.methods_table)
@@ -259,20 +265,21 @@ class LCASetupTab(QtWidgets.QWidget):
     @Slot(int, name="changeCalculationType")
     def select_calculation_type(self, index: int):
         if index == self.DEFAULT:
-            # Standard LCA.
+            # Standard LCA
             self.calculate_button.show()
             for obj in self.presamples:
                 obj.hide()
             self.scenario_calc_btn.hide()
             self.scenario_panel.hide()
         elif index == self.SCENARIOS:
+            # Scenario LCA
             self.calculate_button.hide()
             for obj in self.presamples:
                 obj.hide()
             self.scenario_calc_btn.show()
             self.scenario_panel.show()
         elif index == self.PRESAMPLES:
-            # Presamples / Scenarios LCA.
+            # Presamples / Scenarios LCA
             self.calculate_button.hide()
             for obj in self.presamples:
                 obj.show()

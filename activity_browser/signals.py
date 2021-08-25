@@ -25,6 +25,7 @@ class Signals(QObject):
     # Database
     add_database = Signal()
     delete_database = Signal(str)
+    delete_database_confirmed = Signal(str)
     copy_database = Signal(str)
     install_default_data = Signal()
     import_database = Signal()
@@ -50,6 +51,7 @@ class Signals(QObject):
     open_activity_graph_tab = Signal(tuple)
     delete_activity = Signal(tuple)
     delete_activities = Signal(list)
+    activity_deleted = Signal(tuple)
 
     # Activity editing
     edit_activity = Signal(str)  # db_name

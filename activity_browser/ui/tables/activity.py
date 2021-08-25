@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
 
@@ -9,8 +11,11 @@ from .models import (
 )
 from .views import ABDataFrameView
 from ..icons import qicons
+from activity_browser.extensions.mlca.mlca_icons import mlca_qicons
 from ...signals import signals
 
+from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
+from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
 
 class BaseExchangeTable(ABDataFrameView):
     MODEL = BaseExchangeModel
@@ -158,7 +163,58 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         menu.addAction(self.delete_exchange_action)
         menu.addAction(self.remove_formula_action)
         menu.addAction(self.remove_uncertainty_action)
+
+        available_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(available_modules) > 0:
+            menu.addSeparator()
+            if len(available_modules) > 1:
+                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            else:
+                sub_menu = menu
+            module_actions = []
+
+            # add the relevant modules
+            for module_name in available_modules:
+                module_actions.append((module_name,
+                                       QtWidgets.QAction(
+                                           qicons.add, "Add activity to '{}'".format(module_name), None
+                                       )))
+            for module_data in module_actions:
+                module_name, module_action = module_data
+                sub_menu.addAction(module_action)
+                module_action.triggered.connect(partial(self.module_context_handler, module_name))
+
         menu.exec_(a0.globalPos())
+
+    def generate_module_items(self, key):
+        available_modules = set()
+        # get relevant modules
+        if msc.related_activities and msc.related_activities.get(key, False):
+            modules = msc.related_activities[key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if key not in msc.affected_activities[module[0]]:
+                    available_modules.add(module[0])
+        available_modules = list(available_modules) + msc.empty_modules
+        return available_modules
+
+    def module_context_handler(self, item_name):
+        """Decide what happens based on which context menu option was clicked"""
+        key = self.model.get_key(self.currentIndex())
+
+        if item_name:
+            print('++++', item_name)
+            return
+
+        modules = msc.related_activities[key]
+        for module in modules:
+            if module[0] == item_name:
+                break
+        if module[1] == 'output':
+            mlca_signals.replace_output.emit((module[0], key))
+        elif module[1] == 'chain':
+            mlca_signals.add_to_chain.emit((module[0], key))
+        signals.show_tab.emit("Modular System")
 
     def dragEnterEvent(self, event):
         """ Accept exchanges from a technosphere database table, and the
@@ -226,4 +282,51 @@ class DownstreamExchangeTable(BaseExchangeTable):
     def contextMenuEvent(self, a0) -> None:
         menu = QtWidgets.QMenu()
         menu.addAction(qicons.right, "Open activities", self.open_activities)
+
+        available_modules = self.generate_module_items(self.model.get_key(self.currentIndex()))
+        if len(available_modules) > 0:
+            menu.addSeparator()
+            if len(available_modules) > 1:
+                sub_menu = menu.addMenu(mlca_qicons.modular_system, "Add activity to module")
+            else:
+                sub_menu = menu
+            module_actions = []
+
+            # add the relevant modules
+            for module_name in available_modules:
+                module_actions.append((module_name,
+                                       QtWidgets.QAction(
+                                           qicons.add, "Add activity to '{}'".format(module_name), None
+                                       )))
+            for module_data in module_actions:
+                module_name, module_action = module_data
+                sub_menu.addAction(module_action)
+                module_action.triggered.connect(partial(self.module_context_handler, module_name))
+
         menu.exec_(a0.globalPos())
+
+    def generate_module_items(self, key):
+        available_modules = set()
+        # get relevant modules
+        if msc.related_activities and msc.related_activities.get(key, False):
+            modules = msc.related_activities[key]
+            for module in modules:
+                # put in any module that this activity is not already part of
+                if key not in msc.affected_activities[module[0]]:
+                    available_modules.add(module[0])
+        available_modules = list(available_modules) + msc.empty_modules
+        return available_modules
+
+    def module_context_handler(self, item_name):
+        """Decide what happens based on which context menu option was clicked"""
+        key = self.model.get_key(self.currentIndex())
+
+        modules = msc.related_activities[key]
+        for module in modules:
+            if module[0] == item_name:
+                break
+        if module[1] == 'output':
+            mlca_signals.replace_output.emit((module[0], key))
+        elif module[1] == 'chain':
+            mlca_signals.add_to_chain.emit((module[0], key))
+        signals.show_tab.emit("Modular System")
