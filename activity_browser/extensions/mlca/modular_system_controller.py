@@ -313,6 +313,7 @@ class ModularSystemController(object):
 
         self.get_modular_system.get_module(module_name).output_based_scaling = state
         self.update_modular_system()
+        self.update_module(module_name)
         mlca_signals.module_changed.emit(module_name)
 
     def add_to_chain(self, module_key: tuple, update=True) -> None:
