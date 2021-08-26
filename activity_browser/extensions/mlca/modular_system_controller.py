@@ -25,6 +25,7 @@ class ModularSystemController(object):
         self.outputs = None
         self.affected_activities = None
         self.related_activities = None
+        self.related_activities_reversed = {}
         self.lca_result = None
 
         self.connect_signals()
@@ -150,6 +151,7 @@ class ModularSystemController(object):
         self.outputs = None
         self.affected_activities = None
         self.related_activities = None
+        self.related_activities_reversed = {}
         self.lca_result = None
 
         self.get_raw_data
@@ -431,6 +433,9 @@ class ModularSystemController(object):
         module_key is a tuple with (module_name, activity key)"""
         module_name, key = module_key
         ref_prod = bw.get_activity(key)["reference product"]
+        unspec_outp = (key, 'Unspecified Output', 1.0)
+        if unspec_outp in self.get_modular_system.get_module(module_name).outputs:
+            self.remove_from_outputs((module_name, unspec_outp), update=False)
         self.get_modular_system.get_module(module_name).outputs.append((key, ref_prod, 1.0))
 
         self.update_modular_system()
@@ -447,8 +452,7 @@ class ModularSystemController(object):
         for output in self.get_modular_system.get_module(module_name).outputs:
             if output == _output:
                 self.get_modular_system.get_module(module_name).outputs.remove(_output)
-            else:
-                return
+                break
 
         if update:
             self.update_modular_system()
@@ -468,8 +472,14 @@ class ModularSystemController(object):
         exchanges = [ex['input'] for ex in bw.get_activity(key).technosphere()]
         for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
             if output[0] in exchanges:
-                _, custom_name, amount = output
-                self.get_modular_system.get_module(module_name).outputs[i] = (key, custom_name, amount)
+                _, product_name, amount = output
+                if product_name == bw.get_activity(output[0])['reference product']:
+                    # if the product name is the same as the reference product of the old output,
+                    # replace the output product with the reference product of the new output,
+                    # otherwise, keep the modified product name
+                    product_name = bw.get_activity(key)['reference product']
+
+                self.get_modular_system.get_module(module_name).outputs[i] = (key, product_name, amount)
 
         self.update_modular_system()
         self.update_module(module_name)
@@ -533,30 +543,29 @@ class ModularSystemController(object):
 
         Each activity that is an input to a part of the module or downstream from an output is in this dict."""
         keys = {}
-        _keys = {}
+        _keys = {}  # _keys exists to check if the module is already in keys, independent of the output/chain state
+
+        def update_keys(exchanges, side, name):
+            for exchange in exchanges:
+                exch_key = exchange[side]
+                if keys.get(exch_key, False) \
+                        and module.name not in _keys[exch_key]:
+                    _keys[exch_key].append(module.name)
+                    keys[exch_key].append((module.name, name))
+                else:
+                    _keys[exch_key] = [module.name]
+                    keys[exch_key] = [(module.name, name)]
+
         for module in self.get_modular_system.get_modules():
-            # check for upstream processes
-            for act_key in module.chain:
-                activity = bw.get_activity(act_key)
-                for exchange in activity.technosphere():
-                    exch_key = exchange['input']
-                    if keys.get(exch_key, False) \
-                            and module.name not in _keys[exch_key]:
-                        keys[exch_key].append((module.name, 'chain'))
-                    else:
-                        _keys[exch_key] = module.name
-                        keys[exch_key] = [(module.name, 'chain')]
-            # check for downstream processes
+            # check for output processes
             for act_key, _, _ in module.outputs:
                 activity = bw.get_activity(act_key)
-                for exchange in activity.upstream():
-                    exch_key = exchange['output']
-                    if keys.get(exch_key, False) \
-                            and module.name not in _keys[exch_key]:
-                        keys[exch_key].append((module.name, 'output'))
-                    else:
-                        _keys[exch_key] = module.name
-                        keys[exch_key] = [(module.name, 'output')]
+                update_keys(activity.upstream(), 'output', 'output')
+            # check for all processes
+            for act_key in module.chain:
+                activity = bw.get_activity(act_key)
+                update_keys(activity.technosphere(), 'input', 'chain')
+                update_keys(activity.upstream(), 'output', 'chain')
 
         self.related_activities = keys
         return keys
