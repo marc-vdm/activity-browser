@@ -166,6 +166,9 @@ class Module(object):
         for o in outputs:
             if o[0] not in self.scaling_activities:
                 print("MODULE: Removing a specified output that is *not* actually an output: " + str(o[0]))
+                if len(self.chain) == 1 and \
+                        len(self.filtered_database[list(self.filtered_database.keys())[0]]['exchanges']) == 0:
+                    print('An output activity needs at least 1 exchange to work.')
                 padded_outputs.remove(o)
         return padded_outputs
 

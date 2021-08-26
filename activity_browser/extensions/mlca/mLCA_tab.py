@@ -47,6 +47,7 @@ class mLCATab(QtWidgets.QWidget):
         signals.project_selected.connect(self.change_project)
         mlca_signals.module_db_changed.connect(self.update_widgets)
         mlca_signals.module_selected.connect(self.update_widgets)
+        mlca_signals.module_changed.connect(self.update_widgets)
 
         mlca_signals.import_modular_system.connect(self.import_modules_dialog)
         mlca_signals.export_modules.connect(self.export_modules_dialog)
@@ -74,6 +75,7 @@ class mLCATab(QtWidgets.QWidget):
             self.modular_database_widget.graph_button.show()
             self.modular_database_widget.table.show()
             self.modular_database_widget.export_button.show()
+            self.resize_splitter()
         else:
             # there are no modules
             self.modular_database_widget.label_no_modules.show()
@@ -84,7 +86,6 @@ class mLCATab(QtWidgets.QWidget):
         self.resize_splitter()
 
     def resize_splitter(self):
-        # TODO revise description
         """Splitter sizes need to be reset (for some reason this is buggy if not done like this)"""
         widgets = [self.modular_database_widget, self.module_widget]
         sizes = [x.sizeHint().height() for x in widgets]
@@ -402,6 +403,7 @@ class ModuleWidget(QtWidgets.QWidget):
         if deleted_module == self.module_name or not deleted_module:
             self.hide()
             self.module_name = None
+            self.update_available_cuts()
 
     def output_based_scaling_editor(self, state):
         mlca_signals.module_set_obs.emit((self.module_name, state))
