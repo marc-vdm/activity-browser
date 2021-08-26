@@ -69,6 +69,9 @@ class Module(object):
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
 
+        if hasattr(self, "calculated_lca"):
+            del self.calculated_lca
+
     def remove_cuts_from_chain(self, chain: list, cuts: list) -> set:
         """Remove chain items if they are the parent of a cut. Otherwise this leads to unintended LCIA results."""
         for cut in cuts:
