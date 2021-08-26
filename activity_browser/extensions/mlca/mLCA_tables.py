@@ -242,10 +242,15 @@ class ModuleChainTable(GenericModuleTable):
             else:
                 self.add_cut_action.setDisabled(True)
             # check if 'remove activity' should be enabled
-            if key not in children or key in module.output_keys:
+            if key not in children or key in module.output_keys.keys():
                 self.remove_activity_action.setEnabled(True)
             else:
                 self.remove_activity_action.setDisabled(True)
+        # dont allow an output activity to be added twice
+        if key in module.output_keys.keys() and module.output_keys[key] != 'Unspecified Output':
+            self.add_output_action.setDisabled(True)
+        else:
+            self.add_output_action.setEnabled(True)
 
         menu.exec_(event.globalPos())
 

@@ -234,10 +234,6 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         """Decide what happens based on which context menu option was clicked"""
         key = self.model.get_key(self.currentIndex())
 
-        if item_name:
-            print('++++', item_name)
-            return
-
         modules = msc.related_activities[key]
         for module in modules:
             if module[0] == item_name:
