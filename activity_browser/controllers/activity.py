@@ -265,6 +265,7 @@ class ExchangeController(QObject):
             # If a formula was set, removed or changed, recalculate exchanges
             signals.exchange_formula_changed.emit(exchange["output"])
         signals.database_changed.emit(exchange["output"][0])
+        signals.exchange_modify_complete.emit(exchange)
 
     @Slot(object, name="runUncertaintyWizard")
     def edit_exchange_uncertainty(self, exc: ExchangeProxyBase) -> None:

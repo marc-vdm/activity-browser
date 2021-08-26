@@ -49,7 +49,7 @@ class ModularSystemController(object):
         mlca_signals.replace_output.connect(self.replace_output)
         mlca_signals.alter_output.connect(self.alter_output)
 
-        signals.exchange_modified.connect(self.db_exchange_modified)
+        signals.exchange_modify_complete.connect(self.db_exchange_modified)
         signals.exchanges_deleted.connect(self.db_exchange_deleted)
         signals.activity_modified.connect(self.db_activity_modified)
         signals.activity_deleted.connect(self.db_activity_deleted)
@@ -228,13 +228,12 @@ class ModularSystemController(object):
         """Remove references to deleted activities in modules."""
         self.activity_delete(self.module_names, key)
 
-    def db_exchange_modified(self, exchange: object, field: str, value: object) -> None:
+    def db_exchange_modified(self, exchange: object) -> None:
         """Edit references to edited activities in modules."""
         check_modules = set()
-        key_in = exchange.input.key
-        key_out = exchange.output.key
+        key_in = exchange.input.key  # is an exchange into the activity (exchange.output.key)
         for module_name in self.module_names:
-            if key_out in self.affected_activities.get(module_name, False):
+            if key_in in self.affected_activities.get(module_name, False):
                 check_modules.add(module_name)
         self.activity_modify(list(check_modules), key_in)
 
@@ -402,17 +401,23 @@ class ModularSystemController(object):
             mlca_signals.module_db_changed.emit()
             mlca_signals.module_changed.emit(module_name)
 
-    def alter_cut(self, module_cut_new: tuple) -> None:
+    def alter_cut(self, module_cut_new: tuple, new='name') -> None:
         """Alter cut product in cuts.
 
         Alters the cut product of a cut based on incoming data
-        module_cut_new is a tuple with (module_name, cut, new name)"""
-        module_name, old_cut, new_name = module_cut_new
+        module_cut_new is a tuple with (module_name, cut, new name or value)"""
 
-        new_cut = (old_cut[0], old_cut[1], new_name, old_cut[3])
+        if new == 'name':
+            module_name, old_cut, new_name = module_cut_new
+            new_cut = (old_cut[0], old_cut[1], new_name, old_cut[3])
+        elif new == 'value':
+            module_name, old_cut, new_value = module_cut_new
+            new_cut = (old_cut[0], old_cut[1], old_cut[2], new_value)
+
         for i, cut in enumerate(self.get_modular_system.get_module(module_name).cuts):
             if cut == old_cut:
                 self.get_modular_system.get_module(module_name).cuts[i] = new_cut
+                break
 
         self.update_modular_system()
         self.update_module(module_name)

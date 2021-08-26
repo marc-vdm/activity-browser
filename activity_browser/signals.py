@@ -58,6 +58,7 @@ class Signals(QObject):
     exchanges_deleted = Signal(list)
     exchanges_add = Signal(list, tuple)
     exchange_modified = Signal(object, str, object)
+    exchange_modify_complete = Signal(object)
     # Exchange object and uncertainty dictionary
     exchange_uncertainty_wizard = Signal(object)
     exchange_uncertainty_modified = Signal(object, object)
