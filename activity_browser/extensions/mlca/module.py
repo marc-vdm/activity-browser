@@ -47,7 +47,7 @@ class Module(object):
         self.color = color
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
-        self.output_keys = [o[0] for o in self.outputs]
+        self.output_keys = {o[0]: o[1] for o in self.outputs}
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
 
@@ -65,9 +65,12 @@ class Module(object):
         self.pad_cuts
 
         self.output_names = [o[1] for o in self.outputs]
-        self.output_keys = [o[0] for o in self.outputs]
+        self.output_keys = {o[0]: o[1] for o in self.outputs}
         self.cut_names = [c[2] for c in self.cuts]
         self.is_multi_output = len(self.outputs) > 1
+
+        if hasattr(self, "calculated_lca"):
+            del self.calculated_lca
 
     def remove_cuts_from_chain(self, chain: list, cuts: list) -> set:
         """Remove chain items if they are the parent of a cut. Otherwise this leads to unintended LCIA results."""
@@ -166,6 +169,9 @@ class Module(object):
         for o in outputs:
             if o[0] not in self.scaling_activities:
                 print("MODULE: Removing a specified output that is *not* actually an output: " + str(o[0]))
+                if len(self.chain) == 1 and \
+                        len(self.filtered_database[list(self.filtered_database.keys())[0]]['exchanges']) == 0:
+                    print('An output activity needs at least 1 exchange to work.')
                 padded_outputs.remove(o)
         return padded_outputs
 
