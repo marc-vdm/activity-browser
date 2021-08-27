@@ -424,12 +424,20 @@ class ModularSystem(object):
         * *demand* (dict): keys: product names, values: amount
         """
         if self.has_multi_output_modules:
-            print('\nCannot calculate LCAs for alternatives as system contains ' \
-                  'loops (', self.has_loops, ') / multi-output modules (', self.has_multi_output_modules, ').')
-        else:
-            path_lca_data = []
+            # the system has multi output modules, need to check whether it affects the current paths
             for _demand in demand.items():
                 _demand, amount = _demand
                 for path in self.all_pathways(_demand):
-                    path_lca_data.append(self.lca_linked_modules(method, path, {_demand: amount}))
-            return path_lca_data
+                    for part in path:
+                        if part in self.map_name_module.keys() \
+                                and len(self.map_name_module[part].outputs) > 1:
+                            print('\nCannot calculate LCAs for alternatives as system contains '
+                                  'loops ({}) / multi-output modules ({}) for Module {}'
+                                  .format(self.has_loops, self.has_multi_output_modules, part))
+                            return None
+        path_lca_data = []
+        for _demand in demand.items():
+            _demand, amount = _demand
+            for path in self.all_pathways(_demand):
+                path_lca_data.append(self.lca_linked_modules(method, path, {_demand: amount}))
+        return path_lca_data
