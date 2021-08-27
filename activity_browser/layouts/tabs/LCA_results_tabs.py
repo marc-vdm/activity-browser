@@ -179,7 +179,8 @@ class LCAResultsSubTab(QTabWidget):
             self.modular_lca = True
             methods = bw.calculation_setups[self.cs_name]['ia']
             msc.modular_LCA(methods, product_amount)
-
+            if type(msc.lca_result) != pd.DataFrame:
+                self.modular_lca = False
 
         self.mc = MonteCarloLCA(self.cs_name)
 

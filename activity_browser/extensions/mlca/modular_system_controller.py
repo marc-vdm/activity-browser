@@ -22,10 +22,9 @@ class ModularSystemController(object):
         self.get_modular_system
         self.module_names
 
-        self.outputs = None
-        self.affected_activities = None
-        self.related_activities = None
-        self.related_activities_reversed = {}
+        self.get_outputs
+        self.get_affected_activities()
+        self.get_related_activities()
         self.lca_result = None
 
         self.connect_signals()
@@ -56,9 +55,10 @@ class ModularSystemController(object):
         signals.activity_deleted.connect(self.db_activity_deleted)
         signals.delete_database_confirmed.connect(self.db_deleted)
 
-    def project_change(self) -> None:
+    def project_change(self, hard=False) -> None:
         """Get projects new modular system location, resets class data."""
-        # update the project/folder now that the old location is saved to
+        if self.project == bw.projects.current and not hard:
+            return
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
 
@@ -85,6 +85,7 @@ class ModularSystemController(object):
         self.raw_data = self.modular_system.raw_data
 
         self.save_modular_system()
+        self.get_outputs
         mlca_signals.module_db_changed.emit()
 
     def export_modules(self, export_names: list, path: str) -> None:
@@ -633,6 +634,9 @@ class ModularSystemController(object):
         for method in methods:
 
             results = self.get_modular_system.lca_alternatives(method, demand)
+            if results == None:
+                self.lca_result = None
+                return
             _data, paths = self.format_results(results)
             data += _data
 
