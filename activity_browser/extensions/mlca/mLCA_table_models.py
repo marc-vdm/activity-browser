@@ -271,8 +271,15 @@ class ModuleCutsModel(BaseTreeModel):
             output_keys = []
             full_cuts = set()
             for cut in cuts:
+                amt = True
                 for key in cut[0:-2]:
-                    output_keys.append((key, cut, cut[-1]))  # (key, unique id for every cut, amount)
+                    if amt:
+                        cut_data = (key, cut, cut[-1])  # (key, unique id for every cut, amount)
+                        amt = False
+                    else:
+                        # only write the amount for the top row in every cut
+                        cut_data = (key, cut, '')  # (key, unique id for every cut, amount)
+                    output_keys.append(cut_data)
                     full_cuts.add(cut)
             self.full_cuts = list(full_cuts)
 
