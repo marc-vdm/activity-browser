@@ -8,6 +8,7 @@ class MlcaSignals(QObject):
     # db management
     import_modular_system = Signal()
     export_modules = Signal(list)
+    relink_modules = Signal(tuple)
 
     # modules
     new_module = Signal()
