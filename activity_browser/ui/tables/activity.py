@@ -76,11 +76,13 @@ class BaseExchangeTable(ABDataFrameView):
     def open_activities(self) -> None:
         self.model.open_activities(self.selectedIndexes())
 
-    def contextMenuEvent(self, a0) -> None:
+    def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu()
         menu.addAction(self.delete_exchange_action)
         menu.addAction(self.remove_formula_action)
-        menu.exec_(a0.globalPos())
+        menu.exec_(event.globalPos())
 
     def dragMoveEvent(self, event) -> None:
         """ For some reason, this method existing is required for allowing
@@ -113,10 +115,12 @@ class ProductExchangeTable(BaseExchangeTable):
         self.setDragDropMode(QtWidgets.QTableView.DragDrop)
         self.table_name = "product"
 
-    def contextMenuEvent(self, a0) -> None:
+    def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu()
         menu.addAction(self.remove_formula_action)
-        menu.exec_(a0.globalPos())
+        menu.exec_(event.globalPos())
 
     def dragEnterEvent(self, event):
         """ Accept exchanges from a technosphere database table, and the
@@ -155,7 +159,9 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         for c in self.model.UNCERTAINTY:
             self.setColumnHidden(cols.index(c), not show)
 
-    def contextMenuEvent(self, a0) -> None:
+    def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu()
         menu.addAction(qicons.right, "Open activities", self.open_activities)
         menu.addAction(self.modify_uncertainty_action)
@@ -184,7 +190,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
                 sub_menu.addAction(module_action)
                 module_action.triggered.connect(partial(self.module_context_handler, module_name))
 
-        menu.exec_(a0.globalPos())
+        menu.exec_(event.globalPos())
 
     def generate_module_items(self, key):
         available_modules = set()
@@ -247,14 +253,16 @@ class BiosphereExchangeTable(BaseExchangeTable):
         for c in self.model.UNCERTAINTY:
             self.setColumnHidden(cols.index(c), not show)
 
-    def contextMenuEvent(self, a0) -> None:
+    def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu()
         menu.addAction(self.modify_uncertainty_action)
         menu.addSeparator()
         menu.addAction(self.delete_exchange_action)
         menu.addAction(self.remove_formula_action)
         menu.addAction(self.remove_uncertainty_action)
-        menu.exec_(a0.globalPos())
+        menu.exec_(event.globalPos())
 
     def dragEnterEvent(self, event):
         """ Only accept exchanges from a technosphere database table
@@ -275,7 +283,9 @@ class DownstreamExchangeTable(BaseExchangeTable):
         self.downstream = True
         self.table_name = "downstream"
 
-    def contextMenuEvent(self, a0) -> None:
+    def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu()
         menu.addAction(qicons.right, "Open activities", self.open_activities)
 
@@ -299,7 +309,7 @@ class DownstreamExchangeTable(BaseExchangeTable):
                 sub_menu.addAction(module_action)
                 module_action.triggered.connect(partial(self.module_context_handler, module_name))
 
-        menu.exec_(a0.globalPos())
+        menu.exec_(event.globalPos())
 
     def generate_module_items(self, key):
         available_modules = set()

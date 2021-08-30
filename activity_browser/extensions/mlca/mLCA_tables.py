@@ -81,6 +81,8 @@ class ModuleDatabaseTable(ABDataFrameView):
         )
 
     def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu(self)
         if len(self.selectedIndexes()) == 1:
             menu.addAction(self.delete_module_action)
@@ -144,6 +146,8 @@ class GenericModuleTable(ABDataFrameView):
         self.model.updated.connect(self.custom_view_sizing)
 
     def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.open_activity_action)
         menu.addAction(self.open_graph_action)
@@ -194,6 +198,8 @@ class ModuleOutputsTable(GenericModuleTable):
         self.table_name = 'module outputs'
 
     def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.open_activity_action)
         menu.addAction(self.open_graph_action)
@@ -225,6 +231,8 @@ class ModuleChainTable(GenericModuleTable):
         self.table_name = 'module chain'
 
     def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.open_activity_action)
         menu.addAction(self.open_graph_action)
@@ -347,6 +355,8 @@ class ModuleCutsTree(ABDictTreeView):
         ))
 
     def contextMenuEvent(self, event) -> None:
+        if self.indexAt(event.pos()).row() == -1:
+            return
         if self.get_selected_key:
             menu = QtWidgets.QMenu(self)
             menu.addAction(

@@ -6,6 +6,7 @@ from PySide2.QtWidgets import QMessageBox
 
 from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
 from activity_browser.extensions.mlca.mLCA_signals import mlca_signals
+from activity_browser.extensions.mlca.mlca_icons import mlca_qicons
 
 from .line_edit import SignalledLineEdit, SignalledComboEdit
 from ..icons import qicons
@@ -94,7 +95,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.module_field_layout = QtWidgets.QHBoxLayout()
         self.assemble_module_field()
         self.module_field.setLayout(self.module_field_layout)
-        self.module_field.setToolTip("All modules attached to this activity will be displayed here as buttons/labels")
 
         # module combobox
         # the modules list of for activity is shown as a dropdown (ComboBox), which enables users to add this activity to a new or existing module
@@ -124,7 +124,6 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.grid.addWidget(self.module_label, 4, 1)
         self.grid.addWidget(self.module_field, 4, 2)
         self.grid.addWidget(self.module_combo_field, 4, 3)
-
 
         self.setLayout(self.grid)
 
@@ -173,8 +172,17 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
         self.module_combo.setCurrentIndex(0)
 
-    def generate_module_tag(self, module_name):
-        tag = QtWidgets.QPushButton(module_name, self)
+    def generate_module_tag(self, module_name, icon):
+        if icon == 'chain':
+            _icon = mlca_qicons.modular_system_w
+            tooltip = "This activity is part of the '{}' module. " \
+                      "Click this tag to go to the module.".format(module_name)
+        else:
+            _icon = mlca_qicons.cut_w
+            tooltip = "This activity is a cut in the '{}' module. " \
+                      "Click this tag to go to the module.".format(module_name)
+        tag = QtWidgets.QPushButton(_icon, module_name, self)
+        tag.setToolTip(tooltip)
         color = msc.get_modular_system.get_modules([module_name])[0].color
         stylesheet = "background-color: {};" \
                      "border-radius: 15px;" \
@@ -184,11 +192,16 @@ class ActivityDataGrid(QtWidgets.QWidget):
         self.module_field_layout.addWidget(tag)
 
     def assemble_module_field(self):
-        self.module_field_layout.addWidget(QtWidgets.QLabel('Included in:'))
+        label = QtWidgets.QLabel('Included in:')
+        label.setToolTip("All modules attached to this activity will be displayed here as tags")
+        self.module_field_layout.addWidget(label)
         msc.get_modular_system
         for module_name, activities in msc.affected_activities.items():
-            if self.parent.key in activities:
-                self.generate_module_tag(module_name)
+            key = self.parent.key
+            if key in activities and key in msc.get_modular_system.get_module(module_name).chain:
+                self.generate_module_tag(module_name, icon='chain')
+            elif key in activities:
+                self.generate_module_tag(module_name, icon='cut')
 
     def update_module_field(self):
         mf = self.module_field_layout
