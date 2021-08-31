@@ -107,35 +107,39 @@ class ModuleOutputsModel(GenericEditableDragModuleModel):
 
     def sync(self, module_name: str) -> None:
         if module_name == '':
-            self.updated.emit()
-            return
-        self.module_name = module_name
-        for raw_module in msc.get_raw_data:
-            if raw_module['name'] == module_name:
-                outputs = raw_module['outputs']
-                break
+            outputs = []
+        else:
+            self.module_name = module_name
+            for raw_module in msc.get_raw_data:
+                if raw_module['name'] == module_name:
+                    outputs = raw_module['outputs']
+                    break
 
-        output_keys = []
-        for output in outputs:
-            for key in output[0:-2]:
-                output_keys.append((key, output[-2], output[-1]))
+        # check if there is data, otherwise, make empty df
+        if len(outputs) == 0:
+            self._dataframe = pd.DataFrame([], columns=self.HEADERS)
+        else:
+            output_keys = []
+            for output in outputs:
+                for key in output[0:-2]:
+                    output_keys.append((key, output[-2], output[-1]))
 
-        data = []
-        for out_key, module_product, amount in output_keys:
-            db = AB_metadata.get_database_metadata(out_key[0])
-            row = db[db['key'] == out_key]
-            data.append({
-                "module product": module_product,
-                "amount": amount,
-                "name": row['name'].values[0],
-                "unit": row['unit'].values[0],
-                "location": row['location'].values[0],
-                "reference product": row['reference product'].values[0],
-                "database": out_key[0],
-                "key": out_key
-            })
+            data = []
+            for out_key, module_product, amount in output_keys:
+                db = AB_metadata.get_database_metadata(out_key[0])
+                row = db[db['key'] == out_key]
+                data.append({
+                    "module product": module_product,
+                    "amount": amount,
+                    "name": row['name'].values[0],
+                    "unit": row['unit'].values[0],
+                    "location": row['location'].values[0],
+                    "reference product": row['reference product'].values[0],
+                    "database": out_key[0],
+                    "key": out_key
+                })
+            self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
 
-        self._dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.key_col = self._dataframe.columns.get_loc("key")
         self.updated.emit()
 
@@ -158,14 +162,14 @@ class ModuleChainModel(GenericModuleModel):
 
     def sync(self, module_name: str) -> None:
         if module_name == '':
-            self.updated.emit()
-            return
-        self.module_name = module_name
-        self.module = msc.get_modular_system.get_module(module_name)
-        for raw_module in msc.get_raw_data:
-            if raw_module['name'] == module_name:
-                chain = raw_module['chain']
-                break
+            chain = []
+        else:
+            self.module_name = module_name
+            self.module = msc.get_modular_system.get_module(module_name)
+            for raw_module in msc.get_raw_data:
+                if raw_module['name'] == module_name:
+                    chain = raw_module['chain']
+                    break
 
         databases = list(set(c[0] for c in chain))
 
