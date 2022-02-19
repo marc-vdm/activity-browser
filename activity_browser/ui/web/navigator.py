@@ -14,6 +14,7 @@ from .base import BaseGraph, BaseNavigatorWidget
 from ...signals import signals
 from ...bwutils.commontasks import identify_activity_type
 
+
 # TODO:
 # save graph as image
 # zoom reverse direction between canvas and minimap
@@ -29,7 +30,7 @@ from ...bwutils.commontasks import identify_activity_type
 class GraphNavigatorWidget(BaseNavigatorWidget):
     HELP_TEXT = """
     How to use the Graph Navigator:
-    
+
     EXPANSION MODE (DEFAULT):
     Click on activities to expand graph. 
     - click: expand upwards
@@ -40,13 +41,13 @@ class GraphNavigatorWidget(BaseNavigatorWidget):
         1) adding direct up-/downstream nodes and connections (DEFAULT). 
         2) adding direct up-/downstream nodes and connections AS WELL as ALL OTHER connections between the activities in the graph. 
         The first option results in cleaner (but not complete) graphs.    
-    
+
     Checkbox "Remove orphaned nodes": by default nodes that do not link to the central activity (see title) are removed (this may happen after deleting nodes). Uncheck to disable.
-    
+
     Checkbox "Flip negative flows" (experimental): Arrows of negative product flows (e.g. from ecoinvent treatment activities or from substitution) can be flipped. 
     The resulting representation can be more intuitive for understanding the physical product flows (e.g. that wastes are outputs of activities and not negative inputs).   
-    
-    
+
+
     NAVIGATION MODE:
     Click on activities to jump to specific activities (instead of expanding the graph).
     """
@@ -190,7 +191,7 @@ class GraphNavigatorWidget(BaseNavigatorWidget):
             if keyboard["alt"]:  # delete node
                 print("Deleting node: ", key)
                 self.graph.reduce_graph(key)
-            else: # expansion mode
+            else:  # expansion mode
                 print("Expanding graph: ", key)
                 if keyboard["shift"]:  # downstream expansion
                     print("Adding downstream nodes.")

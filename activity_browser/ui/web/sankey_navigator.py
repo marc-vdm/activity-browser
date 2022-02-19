@@ -31,10 +31,10 @@ from ...signals import signals
 class SankeyNavigatorWidget(BaseNavigatorWidget):
     HELP_TEXT = """
     LCA Sankey:
-    
+
     Red flows: Impacts
     Green flows: Avoided impacts
-    
+
     """
     HTML_FILE = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), '../../static/sankey_navigator.html'
@@ -233,7 +233,8 @@ class SankeyNavigatorWidget(BaseNavigatorWidget):
         try:
             if scenario_lca:
                 self.parent.mlca.update_lca_calculation_for_sankey(scenario_index, demand, method_index)
-                data = GraphTraversalWithScenario(self.parent.mlca).calculate(demand, method, cutoff=cut_off, max_calc=max_calc)
+                data = GraphTraversalWithScenario(self.parent.mlca).calculate(demand, method, cutoff=cut_off,
+                                                                              max_calc=max_calc)
             else:
                 data = bw.GraphTraversal().calculate(demand, method, cutoff=cut_off, max_calc=max_calc)
 
