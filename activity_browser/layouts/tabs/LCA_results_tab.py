@@ -44,12 +44,18 @@ class LCAResultsTab(ABTab):
         """ Check if the calculation results with this setup name exists, if it does, remove it, then create a new one. """
 
         cs_name = data.get('cs_name', 'new calculation')
-        calculation_type = data.get('calculation_type', 'simple')
+        calculation_type = data.get('calculation_type', None)
 
-        if calculation_type == 'scenario':
-            name = "{}[Scenarios]".format(cs_name)
-        else:
+
+        if calculation_type == 'simple':
             name = cs_name
+        elif calculation_type == 'scenario':
+            name = "{}[Scenarios]".format(cs_name)
+        elif calculation_type == 'modular':
+            name = "{}[Modules]".format(cs_name)
+            raise Exception("Not Implemented")
+        else:
+            raise Exception("Unknown calculation setup type.")
         self.remove_setup(name)
 
         try:

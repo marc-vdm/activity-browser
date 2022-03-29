@@ -16,6 +16,8 @@ from ...ui.tables import (
 )
 from ...ui.widgets import ExcelReadDialog
 from .base import BaseRightTab
+from ...extensions.mlca.mLCA_signals import mlca_signals
+from ...extensions.mlca.modular_system_controller import modular_system_controller as msc
 
 """
 Lifecycle of a calculation setup
@@ -79,11 +81,24 @@ State data
 
 The currently selected calculation setup is retrieved by getting the currently selected value in ``CSList``.
 
+Adding new setup types
+----------------------
+
+To add a new setup type, the following places need to be extended:
+1. The DEFAULT, SCENARIOS, MODULES list needs to be extended (these are the indices in the calculation type dropdown)
+2. The name of the calculation type needs to be added to self.calculation_type
+3. The right setup needs to be available in self.start_calculation()
+4. The right items need to be displayed with self.select_calculation_type()
+
+If additional new items are added (like tables etc) those need to be integrated accordingly.
+Additionally, the generate_setup() (in layouts>tabs>LCA_results_tab>LCAResultsTab()) activated by 
+signals.lca_calculation.emit(data) in self.start_calculation() needs to understand what to do with the new data type. 
 """
 
 class LCASetupTab(QtWidgets.QWidget):
     DEFAULT = 0
     SCENARIOS = 1
+    MODULES = 2
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -92,6 +107,12 @@ class LCASetupTab(QtWidgets.QWidget):
         cs_panel_layout = QtWidgets.QVBoxLayout()
         self.scenario_panel = ScenarioImportPanel(self)
         self.scenario_panel.hide()
+
+        # Modular LCA specific items
+        self.module_product = QtWidgets.QComboBox()
+        self.module_product.addItems([str(s) for s in msc.outputs.keys()])
+        self.module_paths_table = CSActivityTable(self)  # Placeholder Activities table
+        # --------------------------
 
         self.activities_table = CSActivityTable(self)
         self.methods_table = CSMethodsTable(self)
@@ -104,7 +125,7 @@ class LCASetupTab(QtWidgets.QWidget):
 
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.calculation_type = QtWidgets.QComboBox()
-        self.calculation_type.addItems(["Standard LCA", "Scenario LCA"])
+        self.calculation_type.addItems(["Standard LCA", "Scenario LCA", "Modular LCA"])
 
         name_row = QtWidgets.QHBoxLayout()
         name_row.addWidget(header('Calculation Setup:'))
@@ -132,6 +153,25 @@ class LCASetupTab(QtWidgets.QWidget):
         reference_flow_layout.addWidget(self.activities_table)
         self.reference_flow_widget.setLayout(reference_flow_layout)
 
+        # widget for the modular LCA 'product chooser' + 'paths table'
+        self.modules_widget = QtWidgets.QWidget()
+        modules_product_widget = QtWidgets.QWidget()
+        modules_product_layout = QtWidgets.QHBoxLayout()
+        modules_product_layout.addWidget(QtWidgets.QLabel('Module product'))
+        modules_product_layout.addWidget(self.module_product)
+
+        self.btn = QtWidgets.QPushButton('test')
+        self.btn.clicked.connect(self.update_module_list)
+        modules_product_layout.addWidget(self.btn)
+        modules_product_layout.addStretch()
+        modules_product_widget.setLayout(modules_product_layout)
+        modules_layout = QtWidgets.QVBoxLayout()
+        modules_layout.addWidget(header('Modules:'))
+        modules_layout.addWidget(modules_product_widget)
+        modules_layout.addWidget(self.module_paths_table)
+        self.modules_widget.setLayout(modules_layout)
+        self.modules_widget.hide()
+
         # widget for the impact categories
         self.impact_categories_widget = QtWidgets.QWidget()
         impact_categories_layout = QtWidgets.QVBoxLayout()
@@ -142,6 +182,7 @@ class LCASetupTab(QtWidgets.QWidget):
         # splitter widget to combine the two above widgets
         self.splitter = QtWidgets.QSplitter(Qt.Vertical)
         self.splitter.addWidget(self.reference_flow_widget)
+        self.splitter.addWidget(self.modules_widget)
         self.splitter.addWidget(self.impact_categories_widget)
 
         self.no_setup_label = QtWidgets.QLabel("To do an LCA, create a new calculation setup first by pressing 'New'.")
@@ -181,6 +222,7 @@ class LCASetupTab(QtWidgets.QWidget):
         signals.calculation_setup_selected.connect(lambda: self.show_details())
         signals.calculation_setup_selected.connect(self.enable_calculations)
         signals.calculation_setup_changed.connect(self.enable_calculations)
+        mlca_signals.module_db_changed.connect(self.update_module_list)
 
     def save_cs_changes(self):
         name = self.list_widget.name
@@ -195,18 +237,27 @@ class LCASetupTab(QtWidgets.QWidget):
         """Check what calculation type is selected and send the correct data signal."""
 
         calc_type = self.calculation_type.currentIndex()
+        cs_name = self.list_widget.name
         if calc_type == self.DEFAULT:
             # Standard LCA
             data = {
-                'cs_name': self.list_widget.name,
+                'cs_name': cs_name,
                 'calculation_type': 'simple',
             }
         elif calc_type == self.SCENARIOS:
             # Scenario LCA
             data = {
-                'cs_name': self.list_widget.name,
+                'cs_name': cs_name,
                 'calculation_type': 'scenario',
                 'data': self.scenario_panel.combined_dataframe(),
+            }
+        elif calc_type == self.MODULES:
+            # Modular LCA
+            modules_placeholder = ''
+            data = {
+                'cs_name': cs_name,
+                'calculation_type': 'modular',
+                'data': modules_placeholder,
             }
         else:
             return
@@ -241,15 +292,37 @@ class LCASetupTab(QtWidgets.QWidget):
     def select_calculation_type(self, index: int):
         if index == self.DEFAULT:
             # Standard LCA
+            self.reference_flow_widget.show()
             self.scenario_panel.hide()
+            self.modules_widget.hide()
         elif index == self.SCENARIOS:
             # Scenario LCA
+            self.reference_flow_widget.show()
             self.scenario_panel.show()
+            self.modules_widget.hide()
+        elif index == self.MODULES:
+            # Modular LCA
+            self.reference_flow_widget.hide()
+            self.scenario_panel.hide()
+            self.modules_widget.show()
+
         self.cs_panel.updateGeometry()
+        self.enable_calculations()
 
     def enable_calculations(self):
-        valid_cs = all([self.activities_table.rowCount(), self.methods_table.rowCount()])
+        if self.calculation_type.currentIndex() != self.MODULES:
+            # check normal tables
+            valid_cs = all([self.activities_table.rowCount(), self.methods_table.rowCount()])
+        else:
+            # check modules table
+            valid_cs = False
         self.calculate_button.setEnabled(valid_cs)
+
+    def update_module_list(self):
+        self.module_product.clear()
+        products = [str(s) for s in msc.outputs.keys()]  # placeholder list, should get real list of module products here
+        # the msc.outputs is right, I just need to get the right part of the value out
+        self.module_product.addItems(products)
 
 
 class ScenarioImportPanel(BaseRightTab):
