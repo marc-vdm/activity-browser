@@ -119,14 +119,31 @@ class ModularSystemController(object):
         self.raw_data
         self.outputs (indirectly)
         """
-        modular_system = self.get_modular_system
-        modular_system.load_from_file(filepath=path, append=True)
-        self.modular_system = modular_system
-        self.raw_data = self.modular_system.raw_data
+        new_raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
+        missing_db = set()
+        # check if there are missing databases in the imported modules
+        # store outputs/chain/cuts separately for easier editing later
+        for new_module in new_raw_data:
+            for output in new_module['outputs']:
+                output_db = output[0][0]
+                if output_db not in bw.databases.list:
+                    missing_db.add(output_db)
+            for chn in new_module['chain']:
+                chn_db = chn[0]
+                if chn_db not in bw.databases.list:
+                    missing_db.add(chn_db)
+            for cut in new_module['cuts']:
+                cut_db = cut[0][0]
+                if cut_db not in bw.databases.list:
+                    missing_db.add(cut_db)
+        missing_db = list(missing_db)
 
-        self.save_modular_system()
-        self.get_outputs
-        mlca_signals.module_db_changed.emit()
+        # if nothing is missing, just load the modules
+        if len(missing_db) == 0:
+            self.add_modules(new_raw_data, rename=True)
+        else:
+            # fix missing databases
+            mlca_signals.relink_modules.emit((missing_db, new_raw_data))
 
     def export_modules(self, export_names: list, path: str) -> None:
         """Export list of modules to disk to given path."""
@@ -224,17 +241,23 @@ class ModularSystemController(object):
     # EDITING FULL MODULES
     # create/remove/copy entire modules
 
-    def add_module(self, module_name: str, outputs=[], chain=[], cuts=[], save=True, *args, **kwargs) -> None:
+    def add_module(self, module_name: str, outputs=[], chain=[], cuts=[], save=True, rename=False, *args, **kwargs) -> None:
         """Add module to modular system."""
+        # add the new module
+        module_list = [{'name': module_name,
+                        'outputs': outputs,
+                        'chain': chain,
+                        'cuts': cuts
+                        }]
+        self.add_modules(module_list=module_list, save=save, rename=rename)
+
+    def add_modules(self, module_list: list, save=True, rename=False) -> None:
+        """Add modules to modular system."""
         # get modular system
         modular_system = self.get_modular_system
 
-        # add the new module
-        modular_system.add_module(module_list=[{'name': module_name,
-                                                'outputs': outputs,
-                                                'chain': chain,
-                                                'cuts': cuts
-                                                }])
+        # add the new modules
+        modular_system.add_module(module_list=module_list, rename=rename)
         self.modular_system = modular_system
         self.raw_data = modular_system.raw_data
 

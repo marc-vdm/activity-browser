@@ -57,6 +57,7 @@ class mLCATab(QtWidgets.QWidget):
         mlca_signals.del_modules.connect(self.del_modules_dialog)
         mlca_signals.rename_module.connect(self.rename_module_dialog)
         mlca_signals.module_set_color.connect(self.change_color_module_dialog)
+        mlca_signals.relink_modules.connect(self.relink_module_db_dialog)
 
     def change_project(self):
         self.update_widgets()
@@ -112,7 +113,7 @@ class mLCATab(QtWidgets.QWidget):
             msc.export_modules(export_names, path)
 
     def new_module_dialog(self, activity_key=None):
-        """Dialog to add a new module to the modular system"""
+        """Dialog to add a new module to the modular system."""
         name, ok = QtWidgets.QInputDialog.getText(
             self.window,
             "Create new module",
@@ -135,7 +136,7 @@ class mLCATab(QtWidgets.QWidget):
                 )
 
     def del_module_dialog(self, module_name):
-        """Dialog to add a new module to the modular system"""
+        """Dialog to add a new module to the modular system."""
         ok = QtWidgets.QMessageBox.question(
             self.window,
             "Delete module?",
@@ -146,7 +147,7 @@ class mLCATab(QtWidgets.QWidget):
             msc.del_module(module_name)
 
     def del_modules_dialog(self, module_names):
-        """Dialog to add a new module to the modular system"""
+        """Dialog to add a new module to the modular system."""
         ok = QtWidgets.QMessageBox.question(
             self.window,
             "Delete modules?",
@@ -158,7 +159,7 @@ class mLCATab(QtWidgets.QWidget):
             msc.del_module(module_names[-1])
 
     def rename_module_dialog(self, module_name):
-        """Dialog to rename a module in the modular system"""
+        """Dialog to rename a module in the modular system."""
         name, ok = QtWidgets.QInputDialog.getText(
             self.window,
             "Rename module '{}'".format(module_name),
@@ -179,6 +180,92 @@ class mLCATab(QtWidgets.QWidget):
         color = QtWidgets.QColorDialog().getColor(initial=msc.modular_system.get_module(module_name).meta_data['color'])
         if color.isValid():
             msc.set_module_color(module_name, color.name())
+
+    def relink_module_db_dialog(self, db_data: tuple):
+        """Dialog to relink activities in modules being imported to a new database."""
+        missing_db, new_raw_data = db_data
+        db_list = bw.databases.list
+        options = [(db_name, db_list) for db_name in missing_db]
+        dialog = RelinkModulesDialog.relink_modules(options, self.window)
+        if dialog.exec_() == RelinkModulesDialog.Accepted:
+            # Now, start relinking.
+            links = dialog.links
+            for module in new_raw_data:
+                for i, output in enumerate(module['outputs']):
+                    if output[0][0] in links.keys():
+                        module['outputs'][i] = ((links[output[0][0]], output[0][1]), output[1], output[2])
+                for i, chn in enumerate(module['chain']):
+                    if chn[0] in links.keys():
+                        module['chain'][i] = (links[chn[0]], chn[1])
+                for i, cut in enumerate(module['cuts']):
+                    if cut[0][0] in links.keys():
+                        cut_key1 = (links[cut[0][0]], cut[0][1])
+                    else:
+                        cut_key1 = cut[0]
+                    if cut[1][0] in links.keys():
+                        cut_key2 = (links[cut[1][0]], cut[1][1])
+                    else:
+                        cut_key2 = cut[1]
+                    module['cuts'][i] = (cut_key1, cut_key2, cut[2], cut[3])
+            msc.add_modules(new_raw_data, rename=True)
+
+
+class RelinkModulesDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Relinking modules")
+
+        self.db_label = QtWidgets.QLabel()
+        self.label_choices = []
+        self.grid_box = QtWidgets.QGroupBox("Database links:")
+        self.grid = QtWidgets.QGridLayout()
+        self.grid_box.setLayout(self.grid)
+
+        self.buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+        )
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.db_label)
+        layout.addWidget(self.grid_box)
+        layout.addWidget(self.buttons)
+        self.setLayout(layout)
+
+    @classmethod
+    def construct_dialog(cls, label: str, options: list,
+                         parent: QtWidgets.QWidget = None) -> 'RelinkModulesDialog':
+        obj = cls(parent)
+        obj.db_label.setText(label)
+        # Start at 1 because row 0 is taken up by the db_label
+        for i, item in enumerate(options):
+            label = QtWidgets.QLabel(item[0])
+            combo = QtWidgets.QComboBox()
+            combo.addItems(item[1])
+            combo.setCurrentText(item[0])
+            obj.label_choices.append((label, combo))
+            obj.grid.addWidget(label, i, 0, 1, 2)
+            obj.grid.addWidget(combo, i, 2, 1, 2)
+        obj.updateGeometry()
+        return obj
+
+    @classmethod
+    def relink_modules(cls, options: list,
+                      parent=None) -> 'RelinkModulesDialog':
+        label = "Some database(s) could not be found in the current project," \
+                " attempt to relink the activities in the modules to a different database?"
+        return cls.construct_dialog(label, options, parent)
+
+    @property
+    def links(self) -> dict:
+        """Returns a dictionary of str -> str key/values, showing which keys
+        should be linked to which values.
+        """
+        return {
+            label.text(): combo.currentText() for label, combo in self.label_choices
+        }
+
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
