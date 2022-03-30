@@ -154,9 +154,7 @@ class mLCATab(QtWidgets.QWidget):
             ("Are you sure you want to delete MULTIPLE modules? This action cannot be undone")
         )
         if ok == QtWidgets.QMessageBox.Yes:
-            for module_name in module_names[:-1]:
-                msc.del_module(module_name, save=False)
-            msc.del_module(module_names[-1])
+            msc.del_modules(module_names)
 
     def rename_module_dialog(self, module_name):
         """Dialog to rename a module in the modular system."""

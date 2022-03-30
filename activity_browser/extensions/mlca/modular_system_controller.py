@@ -270,7 +270,12 @@ class ModularSystemController(object):
     def del_module(self, module_name: str, save=True) -> None:
         """Delete module from modular system."""
         # delete the module
-        self.get_modular_system.remove_module([module_name])
+        self.del_modules(module_list=[module_name], save=save)
+
+    def del_modules(self, module_list: list, save=True) -> None:
+        """Delete modules from modular system."""
+        # delete the modules
+        self.get_modular_system.remove_module(module_list)
         self.raw_data = self.modular_system.raw_data
 
         if save:
