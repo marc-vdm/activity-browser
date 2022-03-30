@@ -117,7 +117,7 @@ class ActivityTab(QtWidgets.QWidget):
         self.checkbox_comment.toggled.connect(self.show_comments)
 
         # Reveal/hide module data
-        self.show_modules = QtWidgets.QCheckBox("Show Modules")
+        self.show_modules = QtWidgets.QCheckBox("Modules")
         self.show_modules.setToolTip("Show or hide the module information")
         self.show_modules.setChecked(True)
         self.show_modules.toggled.connect(self.show_modules_data)
@@ -132,7 +132,7 @@ class ActivityTab(QtWidgets.QWidget):
         toolbar.addWidget(self.checkbox_activity_description)
         toolbar.addWidget(self.checkbox_uncertainty)
         toolbar.addWidget(self.checkbox_comment)
-
+        toolbar.addWidget(self.show_modules)
 
         # activity-specific data displayed and editable near the top of the tab
         self.activity_data_grid = ActivityDataGrid(read_only=self.read_only, parent=self)

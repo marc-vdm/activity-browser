@@ -183,7 +183,7 @@ class ActivityDataGrid(QtWidgets.QWidget):
                       "Click this tag to go to the module.".format(module_name)
         tag = QtWidgets.QPushButton(_icon, module_name, self)
         tag.setToolTip(tooltip)
-        color = msc.get_modular_system.get_modules([module_name])[0].color
+        color = msc.get_modular_system.get_modules([module_name])[0].meta_data['color']
         stylesheet = "background-color: {};" \
                      "border-radius: 15px;" \
                      "border: 1px solid black".format(color)

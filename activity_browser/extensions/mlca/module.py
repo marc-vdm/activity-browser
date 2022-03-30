@@ -22,6 +22,7 @@ class Module(object):
         * *chain* (``[key]``): A list of inventory modules in the supply chain (not necessarily in order).
         * *cuts* (``[(parent_key, child_key, str, float)]``): A set of linkages in the supply chain that should be cut. These will appear as **negative** products (i.e. inputs) in the module-product table. The float amount is determined automatically. Format is (input key, output key, product name, amount).
         * *output_based_scaling* (``bool``): True: scaling activities are scaled by the user defined product outputs. False: the scaling activities are set to 1.0 and the user can define any output. This may not reflect reality or original purpose of the inventory modules.
+        * *meta_data* (``dict``): dictionary for meta-data like color, comments and groups
 
     """
     # TODO: introduce UUID for modules?
@@ -30,7 +31,7 @@ class Module(object):
 
     def __init__(self, name: str, outputs: list,
                  chain: list, cuts: list,
-                 output_based_scaling=True, color='white', **kwargs) -> None:
+                 output_based_scaling: bool = True, meta_data: dict = {}, **kwargs) -> None:
         self.key = None  # created when module saved to a DB
         self.name = name
         self.cuts = cuts
@@ -44,7 +45,10 @@ class Module(object):
             self.get_supply_vector(self.chain, self.edges, self.scaling_activities, self.outputs)
         self.get_edge_lists
         self.pad_cuts
-        self.color = color
+        # assemble self.meta_data and fill missing meta data:
+        self.meta_data = {k: meta_data.get(k, '') for k in ['comment', 'group']}
+        self.meta_data['color'] = meta_data.get('color', 'white')  # color needs to be added seperately as it needs a value if missing
+
         # a bit of convenience for users
         self.output_names = [o[1] for o in self.outputs]
         self.output_keys = {o[0]: o[1] for o in self.outputs}
@@ -270,7 +274,8 @@ class Module(object):
             'chain': list(self.chain),
             'cuts': self.cuts,
             'output_based_scaling': self.output_based_scaling,
-            'color': self.color,
+            #'color': self.color,
+            'meta_data': self.meta_data
         }
         return module_data_dict
 

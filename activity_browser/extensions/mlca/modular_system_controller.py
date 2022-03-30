@@ -370,7 +370,7 @@ class ModularSystemController(object):
 
     def set_module_color(self, module_name: str, color: str) -> None:
         """Set color of module in modular system."""
-        self.get_modular_system.get_module(module_name).color = color
+        self.get_modular_system.get_module(module_name).meta_data['color'] = color
 
         self.update_modular_system()
         mlca_signals.module_color_set.emit(module_name)

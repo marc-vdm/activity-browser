@@ -431,7 +431,7 @@ class ModuleWidget(QtWidgets.QWidget):
 
         self.module_name_field.setText(module_name)
         obs = msc.get_modular_system.get_module(module_name).output_based_scaling
-        color = msc.get_modular_system.get_module(module_name).color
+        color = msc.get_modular_system.get_module(module_name).meta_data['color']
         self.output_scaling_checkbox.setChecked(obs)
         self.module_color_editor.setStyleSheet("background-color: {}".format(color))
         if self.cuts_tree.model.full_cuts[0][0] == 'hide':
