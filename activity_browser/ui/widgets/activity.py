@@ -218,9 +218,11 @@ class ActivityDataGrid(QtWidgets.QWidget):
 
         # add new modules if there are any
         for module_name, activities in msc.affected_activities.items():
-            if self.parent.key in activities:
-                # add module tag if it is valid to activity
-                self.generate_module_tag(module_name)
+            key = self.parent.key
+            if key in activities and key in msc.get_modular_system.get_module(module_name).chain:
+                self.generate_module_tag(module_name, icon='chain')
+            elif key in activities:
+                self.generate_module_tag(module_name, icon='cut')
 
     def module_field_tag_clicked(self, tag_name=None):
         mlca_signals.module_selected.emit(tag_name)
