@@ -11,7 +11,33 @@ from activity_browser.signals import signals
 
 class ModularSystemController(object):
     """Manages the data of the modular system.
-    Controller takes care of saving data to the right place, opening the right modular systems and editing any data."""
+    Controller takes care of saving data to the right place, opening the right modular systems and editing any data.
+
+    --- User actions
+
+    Editing modules in modular system
+        add_module()                add module to modular system
+        del_module()                remove module from modular system
+        copy_module()               copy module
+        copy_modules()              copy multiple modules
+
+    Editing data in modules
+        rename_module()             rename module
+        set_module_color()          set the color of a module
+        set_output_based_scaling()  set output based scaling
+
+        add_to_chain()              add activity to chain of module
+        remove_from_chain()         remove activity from chain of module
+
+        add_to_cuts()               add activity to cuts of module
+        remove_from_cuts()          remove activity from cuts of module
+        alter_cut()                 alter cut product name of existing cut
+
+        add_to_outputs()            add activity to outputs of module
+        remove_from_outputs()       remove activity from outputs of module
+        replace_output()            replace output with process downstream of existing output
+        alter_output()              alter output product name or amount of existing output
+    """
     def __init__(self) -> None:
         self.project = bw.projects.current
         self.project_folder = bw.projects.dir
@@ -56,7 +82,12 @@ class ModularSystemController(object):
         signals.delete_database_confirmed.connect(self.db_deleted)
 
     def project_change(self, hard=False) -> None:
-        """Get projects new modular system location, resets class data."""
+        """Get project's new modular system location, resets class data.
+
+        Sets:
+        self.project
+        self.project_folder
+        """
         if self.project == bw.projects.current and not hard:
             return
         self.project = bw.projects.current
@@ -69,7 +100,10 @@ class ModularSystemController(object):
     # RETRIEVE OR SAVE DATA FROM/TO DISK
 
     def save_modular_system(self, modular_system=None, path=None) -> None:
-        """Properly save modular system."""
+        """Save modular system to disk.
+
+        If there is no path, modular system is saved to project folder.
+        """
         if not path:
             path = self.modular_system_path
         if not modular_system:
@@ -78,7 +112,13 @@ class ModularSystemController(object):
         modular_system.save_to_file(path)
 
     def import_modules(self, path: str) -> None:
-        """Import modules from path."""
+        """Import modules from disk.
+
+        Sets:
+        self.modular_system
+        self.raw_data
+        self.outputs (indirectly)
+        """
         modular_system = self.get_modular_system
         modular_system.load_from_file(filepath=path, append=True)
         self.modular_system = modular_system
@@ -89,7 +129,7 @@ class ModularSystemController(object):
         mlca_signals.module_db_changed.emit()
 
     def export_modules(self, export_names: list, path: str) -> None:
-        """Export list of modules to path."""
+        """Export list of modules to disk to given path."""
         if export_names == self.module_names:
             # export the entire modular system
             self.save_modular_system(path=path)
@@ -101,22 +141,36 @@ class ModularSystemController(object):
 
     @property
     def get_modular_system(self, path=None) -> ModularSystem:
-        """Load modular system from file and return the modular system object."""
+        """Gets modular system (from disk)* and return the modular system object.
+
+        Use this function to get the modular system
+
+        This function checks if modular system already exists and only loads from disk when not loaded already.
+
+        TODO describe modular system class here
+
+        Sets:
+        self.outputs (indirectly)
+        self.raw_data (if doesn't exist already)
+        """
         if not path:
             path = self.modular_system_path
 
         # only load if not loaded already
         if self.modular_system:
+            # if loaded already
             return self.modular_system
         elif type(self.raw_data) == list:
+            # if self.raw_data loaded already
             self.modular_system = self.get_modular_system_from_raw(self.raw_data)
             self.get_outputs
             return self.modular_system
         else:
+            # if nothing loaded yet
             modular_system = ModularSystem()
             modular_system.load_from_file(filepath=path)
             self.modular_system = modular_system
-            # update raw data
+            # write raw data
             self.raw_data = self.modular_system.raw_data
             # metadata is updated through signals in individual functions
 
@@ -125,27 +179,32 @@ class ModularSystemController(object):
 
     @property
     def get_raw_data(self, path=None) -> list:
-        """Load raw modular system data and return the raw data."""
+        """Get raw modular system data (from disk)* and return the raw data.
+
+        TODO describe raw_data format here"""
         if not path:
             path = self.modular_system_path
 
         # only load if not loaded already
         if type(self.raw_data) == list:
+            # if loaded already
             return self.raw_data
         else:
+            # if not loaded yet
             self.raw_data = ModularSystem().load_from_file(filepath=path, raw=True)
             return self.raw_data
 
     def get_modular_system_from_raw(self, raw_data: list) -> ModularSystem:
         """Generate a modular system from raw data.
 
-        Open raw and this function together do the same as the get_modular_system function."""
+        Open raw and this function together do the same as the get_modular_system function.
+        """
 
         module_list = [Module(**module) for module in raw_data]
         return ModularSystem(module_list=module_list)
 
     def reset_modular_system(self, full_system=False) -> None:
-        """Completely reset class data for the modular system."""
+        """Completely reset data in class for the modular system."""
         self.modular_system = None
         self.raw_data = None
 
@@ -199,7 +258,10 @@ class ModularSystemController(object):
             mlca_signals.module_selected.emit('')
 
     def copy_module(self, module_name: str, copy_name=None, save=True) -> None:
-        """Copy module in modular system, default copy name is 'original_COPY'."""
+        """Copy module in modular system, default copy name is 'original_COPY'.
+
+        Uses add_module() to create the copied module.
+        """
         # get data to copy
         for raw_module in self.raw_data:
             if raw_module['name'] == module_name:
@@ -213,18 +275,21 @@ class ModularSystemController(object):
         self.add_module(**module, save=save)
 
     def copy_modules(self, module_names):
-        """Copy multiple modules in modular system."""
+        """Copy multiple modules in modular system.
+
+        Uses copy_module() to copy each module.
+        """
         for module_name in module_names:
             self.copy_module(module_name, save=False)
         self.save_modular_system()
         self.get_outputs
         mlca_signals.module_db_changed.emit()
 
-    # EDITING DATA IN MODULES - FROM ACTIVITY CHANGES
+    # EDITING DATA IN MODULES - FROM PROCESS CHANGES
     # change modules due to changes made to activities (like removing an exchange)
 
     def db_activity_modified(self, key: tuple, field: str, value: object) -> None:
-        """Edit references to edited activities in modules."""
+        """Update references to edited activities in modules."""
         self.activity_modify(self.module_names, key)
 
     def db_activity_deleted(self, key: tuple) -> None:
@@ -232,7 +297,7 @@ class ModularSystemController(object):
         self.activity_delete(self.module_names, key)
 
     def db_exchange_modified(self, exchange: object) -> None:
-        """Edit references to edited activities in modules."""
+        """Update references to edited activity exchanges in modules."""
         check_modules = set()
         key_in = exchange.input.key  # is an exchange into the activity (exchange.output.key)
         for module_name in self.module_names:
@@ -241,7 +306,7 @@ class ModularSystemController(object):
         self.activity_modify(list(check_modules), key_in)
 
     def db_exchange_deleted(self, exchanges: list) -> None:
-        """Remove references to deleted activities in modules."""
+        """Remove references to deleted activity exchanges in modules."""
         check_modules = set()
         for exchange in exchanges:
             key_in = exchange.input.key
@@ -280,14 +345,16 @@ class ModularSystemController(object):
 
         Updates to modules are only required when making changes to Outputs, Chain or Cuts
         This function is called after changes are made to a module and the module data needs to be updated.
-        Should be called after updating the whole modular system."""
+        Should be called AFTER updating the whole modular system with update_modular_system().
+        """
         self.modular_system.get_module(module_name).update_module
 
     def update_modular_system(self) -> None:
         """Update the modular system after making changes to a module.
 
         This function is called after changes are made to a module and the modular system needs to be updated.
-        Should be called before updating individual modules."""
+        Should be called BEFORE updating individual modules with update_module().
+        """
         self.modular_system.update(self.modular_system.get_modules())
         # update the raw data
         self.raw_data = self.modular_system.raw_data
@@ -311,7 +378,8 @@ class ModularSystemController(object):
     def set_output_based_scaling(self, module_state: tuple) -> None:
         """Set the 'output based scaling' to the desired state.
 
-        module_state is a tuple with (module_name and the desired state)"""
+        module_state is a tuple with (module_name and the desired state)
+        """
         module_name, state = module_state
 
         self.get_modular_system.get_module(module_name).output_based_scaling = state
@@ -322,7 +390,8 @@ class ModularSystemController(object):
     def add_to_chain(self, module_key: tuple, update=True) -> None:
         """Add activity to chain.
 
-        module_key is a tuple with (module_name, activity key)"""
+        module_key is a tuple with (module_name, activity key)
+        """
         module_name, key = module_key
         self.get_modular_system.get_module(module_name).chain.add(key)
 
@@ -335,7 +404,8 @@ class ModularSystemController(object):
     def remove_from_chain(self, module_key: tuple) -> None:
         """Remove activity from chain.
 
-        module_key is a tuple with (module_name, activity key)"""
+        module_key is a tuple with (module_name, activity key)
+        """
         module_name, key = module_key
         # (potentially) remove from outputs
         self.remove_from_outputs(module_key, update=False)
@@ -355,7 +425,8 @@ class ModularSystemController(object):
     def add_to_cuts(self, input_data: tuple) -> None:
         """Add activity to cut.
 
-        module_key is a tuple with (module_name, activity key)"""
+        module_key is a tuple with (module_name, activity key)
+        """
         if len(input_data) == 2:
             module_name, key = input_data
             product_name = "Unspecified Input"
@@ -388,7 +459,8 @@ class ModularSystemController(object):
         """Remove activity from cuts.
 
         Adds the 'cut' activity to the chain if the key is not being removed from the chain.
-        module_key_src is a tuple with (module_name, activity key OR cut, source info)"""
+        module_key_src is a tuple with (module_name, activity key OR cut, source info)
+        """
         module_name, key_or_cut, src_info = module_key_src
         for cut in self.get_modular_system.get_module(module_name).cuts:
             # in 'cut', [0] is the key of the external activity, [1] is the module activity
@@ -409,7 +481,8 @@ class ModularSystemController(object):
         """Alter cut product in cuts.
 
         Alters the cut product of a cut based on incoming data
-        module_cut_new is a tuple with (module_name, cut, new name or value)"""
+        module_cut_new is a tuple with (module_name, cut, new name or value)
+        """
 
         if new == 'name':
             module_name, old_cut, new_name = module_cut_new
@@ -431,7 +504,8 @@ class ModularSystemController(object):
     def add_to_outputs(self, module_key: tuple) -> None:
         """Add activity to output.
 
-        module_key is a tuple with (module_name, activity key)"""
+        module_key is a tuple with (module_name, activity key)
+        """
         module_name, key = module_key
         ref_prod = bw.get_activity(key)["reference product"]
         unspec_outp = (key, 'Unspecified Output', 1.0)
@@ -448,7 +522,8 @@ class ModularSystemController(object):
     def remove_from_outputs(self, module_out: tuple, update=True) -> None:
         """Remove activity from output.
 
-        module_out is a tuple with (module_name, output)"""
+        module_out is a tuple with (module_name, output)
+        """
         module_name, _output = module_out
         for output in self.get_modular_system.get_module(module_name).outputs:
             if output == _output:
@@ -466,7 +541,8 @@ class ModularSystemController(object):
         """Replace output activity in outputs.
 
         Removes the output and replaces with an activity 'downstream' from the output
-        module_key is a tuple with (module_name, activity key)"""
+        module_key is a tuple with (module_name, activity key)
+        """
         module_name, key = module_key
         self.get_modular_system.get_module(module_name).chain.add(key)
 
@@ -493,7 +569,8 @@ class ModularSystemController(object):
 
         Alters the output (name or amount) of an activity based on incoming data
         module_old_new is a tuple with (module_name, old output, new output)
-        output consists of: (key, custom_name, amount)"""
+        where output consists of: (key, custom_name, amount)
+        """
         module_name, old_output, new_output = module_old_new
 
         for i, output in enumerate(self.get_modular_system.get_module(module_name).outputs):
@@ -514,7 +591,8 @@ class ModularSystemController(object):
         """Dict of all output activities in modular system, by key.
 
         Intended to be called after changes to module outputs or the modular system (adding/removing modules)
-        {key: [(module name, output)]}"""
+        {key: [(module name, output)]}
+        """
         outputs = {}
         for module in self.get_raw_data:
             _outputs = module['outputs']
@@ -530,7 +608,8 @@ class ModularSystemController(object):
     def get_affected_activities(self) -> dict:
         """Dict of all activities in module, by module.
 
-        An activity is 'affected' by a module if the activity is part of the chain or cuts."""
+        An activity is 'affected' by a module if the activity is part of the chain or cuts.
+        """
         aa = {}
         for module in self.get_raw_data:
             activities = set(activity for activity in module['chain'])
@@ -542,7 +621,8 @@ class ModularSystemController(object):
     def get_related_activities(self) -> dict:
         """Dict of all activities in and 'next to' module, by activity.
 
-        Each activity that is an input to a part of the module or downstream from an output is in this dict."""
+        Each activity that is an input to a part of the module or downstream from an output is in this dict.
+        """
         keys = {}
         _keys = {}  # _keys exists to check if the module is already in keys, independent of the output/chain state
 
