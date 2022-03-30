@@ -175,16 +175,10 @@ class mLCATab(QtWidgets.QWidget):
                     )
 
     def change_color_module_dialog(self, module_name):
-        """Dialog to change the color of a module in the modular system"""
-        #TODO make this a proper color chooser
-        color, ok = QtWidgets.QInputDialog.getText(
-            self.window,
-            "Color module '{}'".format(module_name),
-            "New color of module:" + " " * 25
-        )
-
-        if ok and color:
-            msc.set_module_color(module_name, color)
+        """Dialog to change the color of a module in the modular system."""
+        color = QtWidgets.QColorDialog().getColor(initial=msc.modular_system.get_module(module_name).meta_data['color'])
+        if color.isValid():
+            msc.set_module_color(module_name, color.name())
 
 class ModularDatabaseWidget(QtWidgets.QWidget):
     def __init__(self, parent):
