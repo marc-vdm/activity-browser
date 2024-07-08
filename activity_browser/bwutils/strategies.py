@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import hashlib
+import json
 from typing import Collection
 
 from bw2io.errors import StrategyError
@@ -26,6 +27,17 @@ RELINK_FIELDS = (
     "reference product",
     "location",
 )
+
+def csv_restore_iterables(data: Collection) -> Collection:
+    """Use this to re-establish iterable data formats"""
+
+    for act in data:
+        for key, value in act.items():
+            if isinstance(value, tuple):
+                act[key] = tuple([json.loads(v) for v in value])
+            elif isinstance(value, str):
+                act[key] = json.loads(value)
+    return data
 
 
 def relink_exchanges_dbs(data: Collection, relink: dict) -> Collection:

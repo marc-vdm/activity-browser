@@ -1,10 +1,10 @@
 import numbers
 from datetime import datetime as dt
+import json
 from pathlib import Path
-from typing import Union
+from typing import Union, Iterable
 
 import xlsxwriter
-from bw2io.export.csv import reformat
 from bw2io.export.excel import CSVFormatter, create_valid_worksheet_name
 
 from activity_browser.mod import bw2data as bd
@@ -19,6 +19,31 @@ from .pedigree import PedigreeMatrix
 #  - Add 'database' field as required CSVFormatter export field.
 #  - Add code to ensure no second 'activity' field is exported, as this
 #  messes with following import.
+
+def reformat(value):
+    """Reformat values for text based storage."""
+    def json_reformat(x):
+        """Return JSON formatted string of input unless input is str, numeric or bool."""
+        if isinstance(x, (str, int, float, bool)):
+            return x
+        return json.dumps(x)
+
+    if isinstance(value, Iterable) and not isinstance(value, (str, dict)):
+        # any Iterable except str or dict
+        values = []
+        for iter_item in value:
+            # either simple format or convert to json string
+            values.append(json_reformat(iter_item))
+        return "::".join(values)  # join for backwards compatibility
+    else:
+        # str, dict and anything that's not Iterable
+        return json_reformat(value)
+
+def reformat(value):
+    if isinstance(value, (list, tuple)):
+        return "::".join([reformat(x) for x in value])
+    else:
+        return value
 
 
 class ABCSVFormatter(CSVFormatter):

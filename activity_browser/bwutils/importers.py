@@ -22,10 +22,10 @@ from bw2io.strategies import (assign_only_product_as_production,
 from activity_browser.mod import bw2data as bd
 
 from .errors import LinkingFailed
-from .strategies import (alter_database_name, csv_rewrite_product_key,
-                         hash_parameter_group, link_exchanges_without_db,
-                         relink_exchanges_bw2package, relink_exchanges_with_db,
-                         rename_db_bw2package)
+from .strategies import (alter_database_name, csv_restore_iterables,
+                         csv_rewrite_product_key, hash_parameter_group,
+                         link_exchanges_without_db, relink_exchanges_bw2package,
+                         relink_exchanges_with_db, rename_db_bw2package)
 
 
 class ABExcelImporter(ExcelImporter):
@@ -51,6 +51,7 @@ class ABExcelImporter(ExcelImporter):
         obj.strategies = [
             functools.partial(alter_database_name, old=obj.db_name, new=db_name),
             csv_restore_tuples,
+            #csv_restore_iterables,
             csv_restore_booleans,
             csv_numerize,
             csv_drop_unknown,
