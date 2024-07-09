@@ -51,7 +51,7 @@ class ABExcelImporter(ExcelImporter):
         obj.strategies = [
             functools.partial(alter_database_name, old=obj.db_name, new=db_name),
             csv_restore_tuples,
-            #csv_restore_iterables,
+            csv_restore_iterables,
             csv_restore_booleans,
             csv_numerize,
             csv_drop_unknown,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import hashlib
 import json
-from typing import Collection
+from typing import Collection, Iterable
 
 from bw2io.errors import StrategyError
 from bw2io.strategies.generic import (format_nonunique_key_error,
@@ -30,13 +30,24 @@ RELINK_FIELDS = (
 
 def csv_restore_iterables(data: Collection) -> Collection:
     """Use this to re-establish iterable data formats"""
+    def load_json(json_string):
+        try:
+            return json.loads(json_string)
+        except:
+            return json_string
 
     for act in data:
         for key, value in act.items():
-            if isinstance(value, tuple):
-                act[key] = tuple([json.loads(v) for v in value])
-            elif isinstance(value, str):
-                act[key] = json.loads(value)
+            if key == "exchanges":
+                continue
+
+            if isinstance(value, (tuple, list)):
+                act[key] = tuple([load_json(v) for v in value])
+                v = act[key]
+                print(f"PASS: {key} | {type(v)} | {v}")
+            else:
+                act[key] = load_json(value)
+    print("fin")
     return data
 
 

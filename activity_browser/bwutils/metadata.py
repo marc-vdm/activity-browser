@@ -271,7 +271,7 @@ class MetaDataStore(object):
         x = []
         for c in classifications:
             cls = ""
-            if type(c) != list:
+            if not isinstance(c, (list, tuple)):
                 x.append(cls)
                 continue
             for s in c:
