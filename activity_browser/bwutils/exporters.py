@@ -39,12 +39,6 @@ def reformat(value):
         # str, dict and anything that's not Iterable
         return json_reformat(value)
 
-def reformat(value):
-    if isinstance(value, (list, tuple)):
-        return "::".join([reformat(x) for x in value])
-    else:
-        return value
-
 
 class ABCSVFormatter(CSVFormatter):
     def get_activity_metadata(self, act):
