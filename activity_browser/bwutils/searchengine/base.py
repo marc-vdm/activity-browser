@@ -42,7 +42,6 @@ class SearchEngine:
 
     def __init__(self, df: pd.DataFrame, identifier_name: str, searchable_columns: list = []):
         t = time()
-        log.debug(f"SearchEngine initializing for {len(df)} items")
 
         # compile regex patterns for cleaning
         self.SUB_END_PATTERN = re.compile(r"[,.\"'`)\[\]}\\/\-−_:;+…]+(?=\s|$)")  # remove these from end of word
@@ -92,7 +91,7 @@ class SearchEngine:
 
         self.update_index(df)
 
-        log.debug(f"SearchEngine Initialized in {time() - t:.2f} seconds")
+        log.debug(f"SearchEngine Initialized in {time() - t:.1f} seconds")
 
     #   +++ Utility functions
 
@@ -120,18 +119,37 @@ class SearchEngine:
         t = time()
         size_old = len(self.df)
         # identifier to word and df
+        t2 = time()
         i2w, update_df = self.words_in_df(update_df)
+        print(f"df {time() - t2:.2f} s")
+        t2 = time()
         self.identifier_to_word = update_dict(self.identifier_to_word, i2w)
+        print(f"i2w {time() - t2:.2f} s")
+        t2 = time()
         self.df = pd.concat([self.df, update_df])
+        print(f"conc {time() - t2:.2f} s")
+        t2 = time()
         # word to identifier
         w2i = self.reverse_dict_many_to_one(i2w)
+        print(f"w2i {time() - t2:.2f} s")
+        t2 = time()
         self.word_to_identifier = update_dict(self.word_to_identifier, w2i)
+        print(f"w2i up {time() - t2:.2f} s")
+        t2 = time()
         # word to q-gram
         w2q = self.list_to_q_grams(w2i.keys())
+        print(f"w2q {time() - t2:.2f} s")
+        t2 = time()
         self.word_to_q_grams = update_dict(self.word_to_q_grams, w2q)
+        print(f"w2q up {time() - t2:.2f} s")
+        t2 = time()
         # q-gram to word
         q2w = self.reverse_dict_many_to_one(w2q)
+        print(f"q2w {time() - t2:.2f} s")
+        t2 = time()
         self.q_gram_to_word = update_dict(self.q_gram_to_word, q2w)
+        print(f"q2w up {time() - t2:.2f} s")
+        t2 = time()
         size_new = len(self.df)
         size_dif = size_new - size_old
         size_msg = (f"{size_dif} changed items at {int(round(size_dif/(time() - t), 0))} items/sec "
@@ -180,7 +198,8 @@ class SearchEngine:
             return [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
 
         max_cores = max(1, mp.cpu_count() - 1)  # leave at least 1 core for other processes
-        min_chunk_size = 2500
+        min_chunk_size = 25000
+        chunk_size = -1
         if max_cores > 1 and len(df) > min_chunk_size * 2:
             for i in range(max_cores, 0, -1):
                 chunk_size = int(math.ceil(len(df) / i))
@@ -193,13 +212,13 @@ class SearchEngine:
             return self.df_clean_worker(df)
 
         chunks = chunk_dataframe(df, chunk_size)
+        del df  # immediately remove df from memory as we don't need it anymore
         with mp.Pool(processes=use_cores) as pool:
             results = pool.starmap(self.df_clean_worker, [(chunk,) for chunk in chunks])
         return pd.concat(results)
 
     def words_in_df(self, df: pd.DataFrame = None) -> tuple[dict, pd.DataFrame]:
         """Return a dict of {identifier: word} for df."""
-
         df = df if df is not None else self.df.copy()
         df = df.fillna("")  # avoid nan
         # assemble query_col
@@ -232,11 +251,13 @@ class SearchEngine:
             ...
             }
         """
-        text_to_q_gram = self.text_to_positional_q_gram
-        return {
-            word: Counter(text_to_q_gram(word))
-            for word in word_list
-        }
+        w2q = {}
+        for word in word_list:
+            if q_grams := self.word_to_q_grams.get(word):
+                w2q[word] = q_grams
+            else:
+                w2q[word] = Counter(self.text_to_positional_q_gram(word))
+        return w2q
 
     def word_in_index(self, word: str) -> bool:
         """Convenience function to check if a single word is in the search index."""

@@ -12,6 +12,11 @@ log = getLogger(__name__)
 
 
 class MetaDataSearchEngine(SearchEngine):
+    search_engine_whitelist = [
+        "id", "name", "synonyms", "unit", "key", "database",  # generic
+        "CAS number", "categories",  # biosphere specific
+        "product", "reference product", "classifications", "location", "properties"  # activity specific
+    ]
 
     # caching for faster operation
     def database_id_manager(self, database):
@@ -82,6 +87,8 @@ class MetaDataSearchEngine(SearchEngine):
             self.reset_search_cache(database)
 
     def add_identifier(self, data: pd.DataFrame) -> None:
+        cols = [col for col in data.columns if col in self.search_engine_whitelist]
+        data = data.loc[:, cols]
         super().add_identifier(data)
         self.reset_all_caches(data["database"].unique())
 
@@ -104,6 +111,8 @@ class MetaDataSearchEngine(SearchEngine):
         self.reset_all_caches(databases)
 
     def change_identifier(self, identifier, data: pd.DataFrame) -> None:
+        cols = [col for col in data.columns if col in self.search_engine_whitelist]
+        data = data.loc[:, cols]
         super().change_identifier(identifier, data)
         self.reset_all_caches(data["database"].unique())
 

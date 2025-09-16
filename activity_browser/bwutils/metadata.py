@@ -403,7 +403,14 @@ class MetaDataStore(QObject):
         return system_classifications
 
     def init_search(self):
-        self.search_engine = MetaDataSearchEngine(self.dataframe, identifier_name="id", searchable_columns=self.search_engine_whitelist)
+        empty = pd.DataFrame(data=[], columns=["id"])
+        # init an empty search engine, then add databases step by step
+        self.search_engine = MetaDataSearchEngine(empty, identifier_name="id",
+                                                  searchable_columns=self.search_engine_whitelist)
+        for database in self.dataframe["database"].unique():
+            add_df = self.dataframe[self.dataframe["database"] == database]
+            self.search_engine.add_identifier(add_df)
+        # self.search_engine = MetaDataSearchEngine(self.dataframe, identifier_name="id", searchable_columns=self.search_engine_whitelist)
 
     def db_search(self, query:str, database: Optional[str] = None, return_counter: bool = False, logging: bool = True):
         # we do fuzzy search as we re-index results (combining products and activities) for database_products table
