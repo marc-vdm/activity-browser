@@ -12,7 +12,11 @@ log = getLogger(__name__)
 
 
 class MetaDataSearchEngine(SearchEngine):
-    search_engine_whitelist = [
+
+
+    def __init__(self, df: pd.DataFrame, identifier_name: str, searchable_columns: list = []):
+        super().__init__(df, identifier_name, searchable_columns)
+        self.search_engine_whitelist = [
         "id", "name", "synonyms", "unit", "key", "database",  # generic
         "CAS number", "categories",  # biosphere specific
         "product", "reference product", "classifications", "location", "properties"  # activity specific

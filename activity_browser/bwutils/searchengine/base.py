@@ -11,12 +11,13 @@ import pandas as pd
 import numpy as np
 import re
 import sys
+from qtpy.QtCore import QObject
 
 
 log = getLogger(__name__)
 
 
-class SearchEngine:
+class SearchEngine(QObject):
     """
     A Search Engine class, takes a dataframe and makes it searchable.
 
@@ -41,6 +42,7 @@ class SearchEngine:
     """
 
     def __init__(self, df: pd.DataFrame, identifier_name: str, searchable_columns: list = []):
+        super().__init__()
         t = time()
 
         # compile regex patterns for cleaning

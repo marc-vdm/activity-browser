@@ -11,7 +11,7 @@ from logging import getLogger
 from playhouse.shortcuts import model_to_dict
 import pandas as pd
 
-from qtpy.QtCore import Qt, QObject, Signal, SignalInstance
+from qtpy.QtCore import Qt, QObject, Signal, SignalInstance, QThread
 
 import bw2data as bd
 from bw2data.errors import UnknownObject
@@ -72,6 +72,8 @@ class MetaDataStore(QObject):
             "CAS number", "categories",  # biosphere specific
             "product", "reference product", "classifications", "location", "properties"  # activity specific
         ]
+        self.search_engine_thread = QThread()
+        self.search_engine = None
 
     def connect_signals(self):
         signals.project.changed.connect(self.sync)
@@ -236,6 +238,9 @@ class MetaDataStore(QObject):
         """Deletes metadata when the project is changed."""
         t = time()
         log.debug("Synchronizing MetaDataStore")
+        self.search_engine_thread.terminate()
+        del self.search_engine
+        self.search_engine_thread = QThread()
 
         con = sqlite3.connect(sqlite3_lci_db._filepath)
         node_df = pd.read_sql("SELECT * FROM activitydataset", con)
@@ -403,14 +408,24 @@ class MetaDataStore(QObject):
         return system_classifications
 
     def init_search(self):
-        empty = pd.DataFrame(data=[], columns=["id"])
-        # init an empty search engine, then add databases step by step
-        self.search_engine = MetaDataSearchEngine(empty, identifier_name="id",
-                                                  searchable_columns=self.search_engine_whitelist)
+        #TODO
+        # make thread killable somehow
+        # move logging to log function in metadata
+
+        # init an empty search engine, we add databases one by one
+        self.search_engine = MetaDataSearchEngine(
+            pd.DataFrame(data=[], columns=["id"]),  # empty df
+            identifier_name="id",
+            searchable_columns=self.search_engine_whitelist
+        )
+        self.search_engine.moveToThread(self.search_engine_thread)
+        self.search_engine_thread.start()
+
+
+        # add one database at a time
         for database in self.dataframe["database"].unique():
             add_df = self.dataframe[self.dataframe["database"] == database]
             self.search_engine.add_identifier(add_df)
-        # self.search_engine = MetaDataSearchEngine(self.dataframe, identifier_name="id", searchable_columns=self.search_engine_whitelist)
 
     def db_search(self, query:str, database: Optional[str] = None, return_counter: bool = False, logging: bool = True):
         # we do fuzzy search as we re-index results (combining products and activities) for database_products table
