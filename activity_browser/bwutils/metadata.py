@@ -3,7 +3,7 @@ import itertools
 import sqlite3
 import pickle
 import sys
-from time import time
+from time import time, sleep
 from functools import lru_cache
 from typing import Set, Optional
 from logging import getLogger
@@ -72,7 +72,7 @@ class MetaDataStore(QObject):
             "CAS number", "categories",  # biosphere specific
             "product", "reference product", "classifications", "location", "properties"  # activity specific
         ]
-        self.search_engine_thread = QThread()
+        self.is_search_initialized = False
         self.search_engine = None
 
     def connect_signals(self):
@@ -238,9 +238,9 @@ class MetaDataStore(QObject):
         """Deletes metadata when the project is changed."""
         t = time()
         log.debug("Synchronizing MetaDataStore")
-        self.search_engine_thread.terminate()
-        del self.search_engine
-        self.search_engine_thread = QThread()
+        if hasattr(self, "search_engine"):
+            del self.search_engine  # explicitly delete threaded instance of search engine
+        self.is_search_initialized = False
 
         con = sqlite3.connect(sqlite3_lci_db._filepath)
         node_df = pd.read_sql("SELECT * FROM activitydataset", con)
@@ -254,8 +254,8 @@ class MetaDataStore(QObject):
         else:
             size =  f"{size_bytes / (1024 ** 3):.2f} GB"
         log.debug(f"MetaDataStore Synchronized in {time() - t:.2f} seconds for {len(self.dataframe)} items ({size}))")
-        self.init_search()  # init search index
         self.synced.emit()
+        self.init_search()  # init search index
 
     def _parse_df(self, raw_df: pd.DataFrame) -> pd.DataFrame:
         data_df = pd.DataFrame([pickle.loads(x) for x in raw_df["data"]]).drop(columns=["id"], errors="ignore")
@@ -268,7 +268,6 @@ class MetaDataStore(QObject):
             return df
         df.index = pd.MultiIndex.from_tuples(df["key"])
         return df
-
 
     def get_existing_fields(self, field_list: list) -> list:
         """Return a list of fieldnames that exist in the current dataframe."""
@@ -409,23 +408,27 @@ class MetaDataStore(QObject):
 
     def init_search(self):
         #TODO
-        # make thread killable somehow
         # move logging to log function in metadata
 
+        print("INIT SEARCH", list(self.dataframe["database"].unique()))
         # init an empty search engine, we add databases one by one
+        self.search_engine_thread = QThread()
         self.search_engine = MetaDataSearchEngine(
-            pd.DataFrame(data=[], columns=["id"]),  # empty df
+            parent=self,
+            df=pd.DataFrame(data=[], columns=["id"]),  # empty df
             identifier_name="id",
             searchable_columns=self.search_engine_whitelist
         )
         self.search_engine.moveToThread(self.search_engine_thread)
-        self.search_engine_thread.start()
+        self.search_engine.add_db_queue = list(self.dataframe["database"].unique())
+        self.search_engine_thread.started.connect(self.search_engine.add_identifier_threaded)
+        self.search_engine.finished.connect(self.init_search_done)
+        self.search_engine.finished.connect(self.search_engine_thread.quit)
+        self.search_engine_thread.start(QThread.LowestPriority)
 
-
-        # add one database at a time
-        for database in self.dataframe["database"].unique():
-            add_df = self.dataframe[self.dataframe["database"] == database]
-            self.search_engine.add_identifier(add_df)
+    def init_search_done(self):
+        self.is_search_initialized = True
+        print("DONE", self.search_engine.df["database"].unique())
 
     def db_search(self, query:str, database: Optional[str] = None, return_counter: bool = False, logging: bool = True):
         # we do fuzzy search as we re-index results (combining products and activities) for database_products table

@@ -6,21 +6,56 @@ from typing import Optional
 import pandas as pd
 
 from activity_browser.bwutils.searchengine import SearchEngine
-
+from qtpy.QtCore import Signal
 
 log = getLogger(__name__)
 
 
 class MetaDataSearchEngine(SearchEngine):
-
-
-    def __init__(self, df: pd.DataFrame, identifier_name: str, searchable_columns: list = []):
+    finished = Signal()
+    def __init__(self, parent, df: pd.DataFrame, identifier_name: str, searchable_columns: list = []):
         super().__init__(df, identifier_name, searchable_columns)
+        self.parent = parent
         self.search_engine_whitelist = [
         "id", "name", "synonyms", "unit", "key", "database",  # generic
         "CAS number", "categories",  # biosphere specific
         "product", "reference product", "classifications", "location", "properties"  # activity specific
-    ]
+        ]
+
+        self.add_db_queue = []
+        self.is_interrupted = False
+        self.priority_add = None
+
+    def add_identifier_threaded(self):
+        current_dbs = []
+        if "database" in self.df.columns:
+            current_dbs = self.df["database"].unique()
+        # correct queue for items already indexed
+        self.add_db_queue = [db for db in self.add_db_queue if db not in current_dbs]
+        while len(self.add_db_queue) > 0:
+            if self.is_interrupted:
+                database = self.priority_add
+                # double check this database is not already in our data
+                if self.priority_add not in self.df["database"].unique():
+                    add = self.parent.dataframe[self.parent.dataframe["database"] == database]
+                    self.add_identifier(add)
+                    if database in self.add_db_queue:
+                        # remove it from the queue if it is in
+                        remove = self.add_db_queue.index(database)
+                        del self.add_db_queue[remove]
+                self.is_interrupted = False
+                self.priority_add = None
+            else:
+                print("self.add_db_queue", self.add_db_queue)
+                database = self.add_db_queue[0]
+                add = self.parent.dataframe[self.parent.dataframe["database"] == database]
+                self.add_identifier(add)
+                del self.add_db_queue[0]
+        self.finished.emit()
+
+    def interrupt_add_identifier(self, database):
+        self.is_interrupted = True
+        self.priority_add = database
 
     # caching for faster operation
     def database_id_manager(self, database):
@@ -90,6 +125,7 @@ class MetaDataSearchEngine(SearchEngine):
             self.reset_database_word_manager(database)
             self.reset_search_cache(database)
 
+    # add remove etc management
     def add_identifier(self, data: pd.DataFrame) -> None:
         cols = [col for col in data.columns if col in self.search_engine_whitelist]
         data = data.loc[:, cols]

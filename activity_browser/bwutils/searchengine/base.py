@@ -5,13 +5,13 @@ from collections import Counter, OrderedDict, defaultdict
 from logging import getLogger
 import math
 import multiprocessing as mp
-from time import time
+from time import time, sleep
 from typing import Iterable, Optional
 import pandas as pd
 import numpy as np
 import re
 import sys
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QThread
 
 
 log = getLogger(__name__)
@@ -121,37 +121,46 @@ class SearchEngine(QObject):
         t = time()
         size_old = len(self.df)
         # identifier to word and df
-        t2 = time()
+        # t2 = time()
         i2w, update_df = self.words_in_df(update_df)
-        print(f"df {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"df {time() - t2:.2f} s")
+        # t2 = time()
         self.identifier_to_word = update_dict(self.identifier_to_word, i2w)
-        print(f"i2w {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"i2w {time() - t2:.2f} s")
+        # t2 = time()
         self.df = pd.concat([self.df, update_df])
-        print(f"conc {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"conc {time() - t2:.2f} s")
+        # t2 = time()
         # word to identifier
         w2i = self.reverse_dict_many_to_one(i2w)
-        print(f"w2i {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"w2i {time() - t2:.2f} s")
+        # t2 = time()
         self.word_to_identifier = update_dict(self.word_to_identifier, w2i)
-        print(f"w2i up {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"w2i up {time() - t2:.2f} s")
+        # t2 = time()
         # word to q-gram
         w2q = self.list_to_q_grams(w2i.keys())
-        print(f"w2q {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"w2q {time() - t2:.2f} s")
+        # t2 = time()
         self.word_to_q_grams = update_dict(self.word_to_q_grams, w2q)
-        print(f"w2q up {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"w2q up {time() - t2:.2f} s")
+        # t2 = time()
         # q-gram to word
         q2w = self.reverse_dict_many_to_one(w2q)
-        print(f"q2w {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"q2w {time() - t2:.2f} s")
+        # t2 = time()
         self.q_gram_to_word = update_dict(self.q_gram_to_word, q2w)
-        print(f"q2w up {time() - t2:.2f} s")
-        t2 = time()
+        QThread.usleep(1)
+        # print(f"q2w up {time() - t2:.2f} s")
+        # t2 = time()
         size_new = len(self.df)
         size_dif = size_new - size_old
         size_msg = (f"{size_dif} changed items at {int(round(size_dif/(time() - t), 0))} items/sec "
