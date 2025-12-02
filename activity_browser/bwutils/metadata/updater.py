@@ -17,7 +17,7 @@ class MDSUpdater:
     def connect_signals(self):
         from bw2data import signals
         from bw2data.meta import databases
-        
+
         # Connect to Brightway signals
         signals.signaleddataset_on_save.connect(self.on_signaleddataset_save)
         signals.signaleddataset_on_delete.connect(self.on_signaleddataset_delete)
@@ -28,11 +28,11 @@ class MDSUpdater:
     def on_signaleddataset_save(self, sender, old, new):
         """Called when a dataset is created or modified in Brightway."""
         from bw2data.backends import ActivityDataset
-        
+
         # Only process ActivityDataset (nodes), not exchanges or parameters
         if not isinstance(new, ActivityDataset):
             return
-            
+
         node_data = {f: getattr(new, f) for f in primary}
         node_data = node_data | {f: new.data.get(f, np.NaN) for f in secondary}
         node_data["key"] = new.key
@@ -46,11 +46,11 @@ class MDSUpdater:
     def on_signaleddataset_delete(self, sender, old):
         """Called when a dataset is deleted in Brightway."""
         from bw2data.backends import ActivityDataset
-        
+
         # Only process ActivityDataset (nodes), not exchanges or parameters
         if not isinstance(old, ActivityDataset):
             return
-            
+
         try:
             # Create a Series with the key to match the delete_node signature
             ds = pd.Series({"key": old.key, "id": old.id}, name=old.key)
@@ -61,7 +61,7 @@ class MDSUpdater:
     def on_database_deleted_bw(self, sender, name):
         """Called when a database is deleted in Brightway."""
         self.delete_database(name)
-    
+
     def on_databases_metadata_change(self, sender, old, new):
         """Called when the databases metadata changes (e.g., new database added)."""
         self.on_database_changed()
@@ -111,9 +111,17 @@ class MDSUpdater:
     def add_database(self, db_name: str):
         self.mds.loader.load_database(db_name)
 
+        if hasattr(self.mds, "searcher"):
+            data = self.mds.get_database_metadata(db_name)
+            self.mds.searcher.add_identifier(data=data)
+
     def delete_database(self, db_name: str):
         if db_name not in self.mds.databases:
             return
+
+        if hasattr(self.mds, "searcher"):
+            ids = self.mds.dataframe[self.mds.dataframe["database"] == db_name]["id"]  # extract IDs
+            self.mds.searcher.remove_identifiers(ids)
 
         for code in self.mds.dataframe.loc[db_name].index:
             self.mds.register_mutation((db_name, code), "delete")
