@@ -62,6 +62,7 @@ class ABTreeModel(QAbstractItemModel):
         self.grouped_columns: list[str] = []  # list of columns currently used for grouping
         self.sorted_column: str | None = None
         self.sort_order = Qt.SortOrder.AscendingOrder
+        self.was_sorted = False
 
         self.lazy = chunk_size > 0
         self.chunk_size = chunk_size
@@ -335,24 +336,26 @@ class ABTreeModel(QAbstractItemModel):
         self.endInsertRows()
 
     # --- helper functions ---
-    def set_dataframe(self, df: pd.DataFrame, group: list[str] = None, sort = True) -> None:
+    def set_dataframe(self, df: pd.DataFrame, group: list[str] = None) -> None:
         self.beginResetModel()
+        first_init = not self.was_sorted # detect first init, don't sort or filter because the view will do it anyway
+
         self.df = df
         self.grouped_columns = group or self.grouped_columns
 
         self.build_df_index()
-        sort and self.apply_sort()
-        sort and self.apply_filter()
+        self.apply_sort()
+        self.apply_filter()
 
         self.endResetModel()
 
-    def update_dataframe(self, df: pd.DataFrame, group: list[str] = None, sort = True) -> None:
+    def update_dataframe(self, df: pd.DataFrame, group: list[str] = None) -> None:
         self.layoutAboutToBeChanged.emit()
         self.df = df
         self.grouped_columns = group or self.grouped_columns
 
         self.build_df_index()
-        sort and self.apply_sort()
+        self.apply_sort()
         self.apply_filter()
 
         self.layoutChanged.emit()
@@ -378,6 +381,8 @@ class ABTreeModel(QAbstractItemModel):
         self.layoutChanged.emit()
 
     def sort(self, column: int | str, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
+        self.was_sorted = True
+
         self.layoutAboutToBeChanged.emit()
 
         self.sorted_column = self.headerData(column) if isinstance(column, int) else column
