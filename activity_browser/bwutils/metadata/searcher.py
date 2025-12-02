@@ -9,7 +9,7 @@ import pandas as pd
 from activity_browser.bwutils.searchengine import SearchEngine
 
 from .metadata import MetaDataStore
-from .fields import all
+from .fields import search_engine_whitelist
 
 log = getLogger(__name__)
 
@@ -18,7 +18,7 @@ class MDSSearcher(SearchEngine):
 
     def __init__(self, mds: MetaDataStore):
         self.mds = mds
-        super().__init__(self.mds.dataframe, "id", all)
+        super().__init__(self.mds.dataframe, "id", searchable_columns=search_engine_whitelist)
 
     # caching for faster operation
     def database_id_manager(self, database):
@@ -109,7 +109,8 @@ class MDSSearcher(SearchEngine):
         identifiers = set(identifiers)
         current_identifiers = set(self.df.index.to_list())
         identifiers = identifiers | current_identifiers  # only remove identifiers currently in the data
-        databases = self.df.loc[identifiers, ["databases"]].unique()  # extract databases for cache cleaning
+        # get all unique databases of list of identifiers
+        databases = self.df[self.df["id"].isin(identifiers)]["database"].unique()
         if len(identifiers) == 0:
             return
 
